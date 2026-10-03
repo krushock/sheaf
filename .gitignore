@@ -1,0 +1,8 @@
+.DS_Store
+/build/
+.build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+# Generated from project.yml by `make project`
+/Sheaf.xcodeproj/

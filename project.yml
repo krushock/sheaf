@@ -1,0 +1,45 @@
+# Source of truth for Sheaf.xcodeproj. Regenerate with `make project`.
+name: Sheaf
+options:
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+packages:
+  SheafKit:
+    path: Packages/SheafKit
+settings:
+  base:
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 1
+    SWIFT_VERSION: "6.0"
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+targets:
+  Sheaf:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sheaf
+        excludes:
+          - Resources/Info.plist
+          - Resources/Sheaf.entitlements
+    dependencies:
+      - package: SheafKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.valeryburtsev.Sheaf
+        PRODUCT_NAME: Sheaf
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: Sheaf/Resources/Info.plist
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+        INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Valery Burtsev"
+        CODE_SIGN_ENTITLEMENTS: Sheaf/Resources/Sheaf.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        # Sign to Run Locally. Developer ID signing is set up in the shipping phase.
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+        DEVELOPMENT_TEAM: ""
+    scheme:
+      testTargets:
+        - package: SheafKit/SheafKitTests
