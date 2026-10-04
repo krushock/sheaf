@@ -112,6 +112,7 @@ extension ViewerModel {
     func documentDidChange() {
         guard let sheafDocument else { return }
         if selection != nil, selectedAnnotation == nil { selection = nil }
+        refreshMailOrigin()
         contentDidChange()
         invalidateThumbnails(sheafDocument.lastChangedPages)
         for index in sheafDocument.lastChangedPages {

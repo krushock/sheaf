@@ -20,7 +20,7 @@ import UniformTypeIdentifiers
 /// `-SnapshotSidebar hidden|thumbnails|tableOfContents|annotations`, `-SnapshotSearch <text>`,
 /// `-SnapshotLayout continuous|singlePage|twoPages`, `-SnapshotPage <number>`,
 /// `-SnapshotGoToPage YES`, `-SnapshotExport <extension>` (prints `EXPORT` lines),
-/// `-SnapshotAction print|exportPanel|duplicate|revert|saveAs|saveWith:<archival+screen+jpeg+password>`,
+/// `-SnapshotAction print|exportPanel|duplicate|revert|mailClose|mailCopy|mailListing|mailDraft|saveAs|saveWith:<archival+screen+jpeg+password>`,
 /// `-SnapshotMarkup tools,restyle,undo,redo,save,flatten,bookmarks,reply,existing,mouse,typing,
 /// signatures,signatureSheet` (steps run in order),
 /// `-SnapshotPages organize,select:1-3,rotate,move:1,duplicate,delete,blank[:<paper>|:sheet],split,insert:<path>,extract,
@@ -964,6 +964,48 @@ enum DebugSnapshot {
             case "print": viewer.printDocument()
             case "exportPanel": viewer.export()
             case "duplicate": NSDocumentController.shared.documents.first?.duplicate(nil)
+            case "mailListing":
+                // What Sheaf makes of the list of messages Mail hands back, on a made-up list.
+                let sample = "<id-1@example.com>\tVirgi\u{0301}nia Example <virginia@example.com>\tVisita de estudo\tAutorizac\u{0327}a\u{0303}o.pdf\u{1F}foto.jpg\u{1F}\tSaturday, 3 October 2026 at 14:22:10\n<id-2@example.com>\tno-reply@example.com\tOther\t\n"
+                for entry in MailReply.messages(from: sample) {
+                    print("MAIL listing: id \(entry.message.id) name \(entry.message.senderName ?? "none") address \(entry.message.senderAddress ?? "none") short \(entry.message.shortName ?? "none") subject \(entry.message.subject) attachments \(entry.attachments) received \(entry.message.received)")
+                }
+                print("MAIL asks Mail in automated runs: \(MailReply.selectedMessage(withAttachment: "x.pdf") != nil)")
+                // The reply Sheaf would write to a made-up message, checked without Mail.
+                let source = "From: Ana <ana@example.com>\r\nReply-To: Escola <escola@example.com>\r\nSubject: =?UTF-8?Q?Autoriza=C3=A7=C3=A3o?=\r\nDate: Sat, 3 Oct 2026 14:22:10 +0100\r\nMessage-ID: <id-1@example.com>\r\nReferences: <id-0@example.com>\r\nContent-Type: multipart/mixed; boundary=\"b\"\r\n\r\n--b\r\nContent-Type: text/html; charset=utf-8\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n<html><body><p>Ol=C3=A1 <img src=3D\"cid:pic1\"></p></body></html>\r\n--b\r\nContent-Type: image/png\r\nContent-ID: <pic1>\r\nContent-Transfer-Encoding: base64\r\n\r\niVBORw0KGgo=\r\n--b\r\nContent-Type: application/pdf; name=\"a.pdf\"\r\nContent-ID: <pdf1>\r\nContent-Disposition: attachment; filename=\"a.pdf\"\r\nContent-Transfer-Encoding: base64\r\n\r\nJVBERi0=\r\n--b--\r\n"
+                let reply = String(decoding: MailDraft.reply(toSource: source, subject: "Autorização", heading: "On a day, Ana wrote:", attachment: Data("%PDF-1.4".utf8), named: "a.pdf"), as: UTF8.self)
+                let body = reply.components(separatedBy: "\r\n\r\n").compactMap { Data(base64Encoded: $0.components(separatedBy: "\r\n--")[0], options: .ignoreUnknownCharacters) }.map { String(decoding: $0, as: UTF8.self) }.first { $0.hasPrefix("<html") } ?? ""
+                print("MAIL draft: unsent \(reply.hasPrefix("X-Unsent: 1")) to reply-to \(reply.contains("To: Escola <escola@example.com>")) subject \(reply.contains("Subject: Re: =?UTF-8?Q?Autoriza")) thread \(reply.contains("In-Reply-To: <id-1@example.com>") && reply.contains("References: <id-0@example.com> <id-1@example.com>")) quote \(body.contains("<blockquote type=\"cite\"><div>On a day, Ana wrote:</div>") && body.contains("Olá <img src=\"cid:pic1\">")) picture carried \(reply.contains("Content-ID: <pic1>")) old attachment left out \(!reply.contains("pdf1")) pdfs \(reply.components(separatedBy: "application/pdf").count - 1) date \(MailDraft.date(ofSource: source) != nil)")
+            case "mailDraft":
+                // Writes a reply to a made-up message and hands it to Mail, which opens a window:
+                // the one step here that reaches Mail, so it is only run by hand.
+                let sample = "From: Virgi\u{0301}nia Example <virginia@example.com>\nSubject: Visita de estudo\nDate: Sat, 3 Oct 2026 14:22:10 +0100 (WEST)\nMessage-ID: <id-1@example.com>\nContent-Type: text/html; charset=utf-8\n\n<html><body><p>Caros pais,</p><p>Segue a <b>autorizac\u{0327}a\u{0303}o</b>.</p></body></html>\n"
+                let entry = MailReply.messages(from: "<id-1@example.com>\tVirgi\u{0301}nia Example <virginia@example.com>\tVisita de estudo\t\tSaturday, 3 October 2026 at 14:22:10\n").first
+                guard let message = entry?.message, let data = viewer.sheafDocument?.currentData,
+                      let mail = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.mail") else { break }
+                let heading = MailReply.heading(for: message, source: sample)
+                let draft = MailDraft.reply(toSource: sample, subject: message.subject, heading: heading, attachment: data, named: "Sheaf test, do not send.pdf")
+                let folder = FileManager.default.temporaryDirectory.appendingPathComponent("Reply-test", isDirectory: true)
+                print("MAIL draft heading \(heading) bytes \(draft.count) opened \(MailReply.open(draft, in: folder, with: mail))")
+            case "mailCopy":
+                // Opens the document again as an untitled copy, the way an attachment opens from
+                // Mail, changes the copy and saves it, to see what is offered.
+                guard let url = viewer.documentFileURL else { break }
+                let before = Set(NSDocumentController.shared.documents.map(ObjectIdentifier.init))
+                _ = try? NSDocumentController.shared.duplicateDocument(withContentsOf: url, copying: true, displayName: url.deletingPathExtension().lastPathComponent)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    guard let copy = NSDocumentController.shared.documents.first(where: { !before.contains(ObjectIdentifier($0)) }) else { return print("MAIL no copy was made") }
+                    let other = ViewerModel.viewer(of: copy)
+                    other?.refreshMailOrigin()
+                    print("MAIL copy: title \(copy.displayName ?? "") file=\(copy.fileURL?.lastPathComponent ?? "none") noted origin=\(MailReply.origin(of: copy) != nil) viewer origin sender=\(other?.mailOrigin?.shortName ?? "none") attaches as \(other.map(MailReply.attachmentName(for:)) ?? "none")")
+                    other?.rotatePages([0], by: 90)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { copy.save(nil) }
+                }
+            case "mailClose":
+                // Changes the document and closes its window, to see what is offered for one that came from Mail.
+                print("MAIL origin \(String(describing: viewer.mailOrigin)) file \(viewer.documentFileURL?.lastPathComponent ?? "none") can compose=\(MailReply.canCompose)")
+                viewer.rotatePages([0], by: 90)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { viewer.window?.performClose(nil) }
             case "saveAs":
                 // The real Save As panel, to see the options Sheaf adds to it.
                 NSDocumentController.shared.documents.first?.saveAs(nil)

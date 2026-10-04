@@ -1,3 +1,6 @@
 /* Kinds of documents, as the Finder names them. */
 "PDF Document" = "PDF Document";
 "Image" = "Image";
+
+/* Shown when macOS asks whether Sheaf may control Mail. */
+"NSAppleEventsUsageDescription" = "Sheaf asks Mail which message a document came with, so that it can start a reply with the changed document attached.";

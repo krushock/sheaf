@@ -42,6 +42,8 @@ struct ViewerView: View {
             .animation(.easeInOut(duration: 0.22), value: viewer.isInspectorVisible)
         }
         .background(WindowReader { viewer.window = $0 })
+        // Whether the file came out of a message in Mail, which File > Reply and closing ask about.
+        .onChange(of: fileURL, initial: true) { viewer.refreshMailOrigin() }
         // Using a feature is the best sign its tip is no longer needed.
         .onChange(of: viewer.isContentEditing) { EditTip().invalidate(reason: .actionPerformed) }
         .onChange(of: viewer.isOrganizing) { OrganizeTip().invalidate(reason: .actionPerformed) }

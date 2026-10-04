@@ -63,6 +63,16 @@
         }
       }
     },
+    "%@ wrote:" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ пишет:"
+          }
+        }
+      }
+    },
     "%@ × %@ inches" : {
       "localizations" : {
         "en" : {
@@ -1087,6 +1097,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Разновидность PDF для хранения документов десятилетиями: шрифты внутри файла, цветовой профиль, без паролей"
+          }
+        }
+      }
+    },
+    "A message opens in Mail with the changed document attached. Nothing is sent until you send it." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В Почте откроется сообщение с вложенным изменённым документом. Ничего не отправляется, пока вы не отправите его сами."
           }
         }
       }
@@ -5101,6 +5121,16 @@
         }
       }
     },
+    "New Mail Message" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Новое сообщение"
+          }
+        }
+      }
+    },
     "New Password" : {
       "localizations" : {
         "ru" : {
@@ -5557,6 +5587,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "OK"
+          }
+        }
+      }
+    },
+    "On %@, %@ wrote:" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "On %1$@, %2$@ wrote:"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$@ пишет:"
+          }
+        }
+      }
+    },
+    "On %@, at %@, %@ wrote:" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "On %1$@, at %2$@, %3$@ wrote:"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, в %2$@, %3$@ написал(а):"
           }
         }
       }
@@ -7175,6 +7237,26 @@
         }
       }
     },
+    "Reply to %@…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ответить: %@…"
+          }
+        }
+      }
+    },
+    "Reply to Sender…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ответить отправителю…"
+          }
+        }
+      }
+    },
     "Reply…" : {
       "localizations" : {
         "ru" : {
@@ -7717,6 +7799,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Выберите текст или изображение, чтобы изменить их. Дважды нажмите текст, чтобы печатать в нём."
+          }
+        }
+      }
+    },
+    "Select the message in Mail and try again. If macOS asked whether Sheaf may control Mail and the answer was no, allow it in System Settings under Privacy & Security, Automation." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выберите сообщение в Почте и повторите попытку. Если macOS спрашивала, может ли Sheaf управлять Почтой, и ответ был «нет», разрешите это в Системных настройках: «Конфиденциальность и безопасность» > «Автоматизация»."
           }
         }
       }
@@ -8605,6 +8697,16 @@
         }
       }
     },
+    "The message this document came with was not found in Mail." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сообщение, с которым пришёл этот документ, не найдено в Почте."
+          }
+        }
+      }
+    },
     "The page goes after page %lld." : {
       "localizations" : {
         "ru" : {
@@ -9433,6 +9535,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "×"
+          }
+        }
+      }
+    },
+    "“%@” came from Mail and has been changed. Send it back?" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Документ «%@» получен из Почты и был изменён. Отправить его обратно?"
           }
         }
       }

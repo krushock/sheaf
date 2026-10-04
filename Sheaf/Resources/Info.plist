@@ -6,6 +6,8 @@
 	<string>Sheaf.help</string>
 	<key>CFBundleHelpBookName</key>
 	<string>com.valeryburtsev.Sheaf.help</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Sheaf asks Mail which message a document came with, so that it can start a reply with the changed document attached.</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>

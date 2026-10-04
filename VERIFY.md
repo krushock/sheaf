@@ -41,6 +41,23 @@ Open the app with `make run`.
 - [ ] Settings ▸ General ▸ Default PDF app lists every app that opens PDFs, Sheaf first, with the current one checked. Choosing another changes it; choosing Preview puts things back. The row follows a change made elsewhere, such as in the Finder, when you come back to Sheaf.
 - [ ] Settings now opens on the pane you last looked at.
 
+## Documents from Mail (added 2026-10-04)
+
+None of the steps that talk to Mail were run by me: they read your mailbox and write a draft in your account.
+
+- [ ] Open a PDF attachment from a message in Mail with Sheaf, leaving that message selected in Mail. It opens as an untitled copy. Change something and press ⌘S. The first time, macOS asks whether Sheaf may control Mail: allow it. A sheet then offers Reply to <first name>…, New Mail Message, Save… and Cancel, as Preview does.
+- [ ] Reply to <name>… opens a reply in Mail, addressed to the sender, with "Re:" and the subject, and with the changed PDF attached under the attachment's own name. Nothing is sent until you send it. Check the attachment is there and opens.
+- [ ] The earlier message is quoted in the reply the way Mail quotes it (changed twice on 2026-10-04: first the quote vanished, then it was plain ">" lines). Sheaf now writes the whole reply itself as a draft and has Mail open it: the original keeps its formatting, links and pictures, sits behind Mail's quote bar, under "On <date>, at <time>, <sender> wrote:". I checked with a made-up message that Mail opens such a draft from the sandboxed app, and you confirmed the look for a test draft. Check a real one: a long thread, a message with pictures in the text, and a plain-text message.
+- [ ] Send one such reply to yourself and look at it where it arrives: it should fall into the same conversation as the original (the draft carries In-Reply-To and References; whether Mail keeps them when sending I could not try, since I send nothing).
+- [ ] Known differences from Preview: Mail picks the From account by its own default rather than by the mailbox the message is in, the original is not marked as replied in the message list, and the original's other attachments are not sent back (pictures shown inside the text are).
+- [ ] If Mail has another message selected by then, or you answered no to the question about controlling Mail, the sheet has no Reply button, only New Mail Message. Allow it later in System Settings ▸ Privacy & Security ▸ Automation.
+- [ ] File ▸ Reply to Sender… does the same at any time for a document from Mail, and says so when the message is not selected.
+- [ ] Close the changed copy without saving: the same offer, with Close in place of Save…. After a message was started for the document as it is, closing does not ask again.
+- [ ] Save… goes on to the usual save dialog. New Mail Message opens an empty message with the PDF attached.
+- [ ] A document that did not come from Mail saves and closes without any question, File ▸ Reply to Sender… is dimmed, and Sheaf never talks to Mail.
+- [ ] If something here does not work, run this right after and send me the output. It has no names or addresses:
+      `/usr/bin/log show --last 5m --info --predicate 'subsystem == "com.valeryburtsev.Sheaf"'`
+
 ## Markup (Phase 3)
 
 - [ ] With the Highlight tool active, dragging across text highlights it. Same for Underline and Strikethrough.

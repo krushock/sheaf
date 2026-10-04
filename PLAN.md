@@ -616,3 +616,42 @@ Flows also become Shortcuts actions and Finder Quick Actions. Starred → Finder
     PDFs. Both go through `NSWorkspace.setDefaultApplication(at:toOpen:)`. Whether
     macOS lets a sandboxed app make that change was not tried, since trying changes a
     setting of the person's Mac; when it refuses, an alert explains the Finder's way.
+  - **Reply from a Mail attachment, 2026-10-04.** Preview offers to reply when a
+    changed attachment is closed. Sheaf reads who sent a file from the "where from"
+    attribute Mail puts on attachments (sender, subject, a link to the message), offers
+    Reply, New Mail Message, Close and Cancel when such a document is closed after a
+    change, and has File ▸ Reply to Sender…. The message is made through the system's
+    compose-mail sharing service, addressed to the sender with "Re:" and the subject.
+    It is not threaded to the original: replying to a message in the mailbox takes
+    access to Mail that a sandboxed app does not have. The offer on closing is an
+    override of `canClose(withDelegate:shouldClose:contextInfo:)` on SwiftUI's
+    document class, next to the save panel ones.
+    Mail's attachments open as untitled copies with no file of their own, so the first
+    version, which looked at the document's file, never saw one. Where a document is
+    read from is now noted as it is read (an override of `read(from:ofType:)`, set up
+    at launch on the classes SwiftUI makes for the app's document types), and the offer
+    is also made on Save, by overriding the Save command itself: the documented
+    `runModalSavePanel` is not what AppKit goes through for these documents.
+    The file Mail hands over turned out to say nothing about its message that a
+    sandboxed app can read: no "where from" attribute, and a quarantine record whose
+    sender sits in a database outside the sandbox. So Sheaf asks Mail, by AppleScript,
+    which of the selected messages has an attachment of that name, and has Mail start
+    the reply itself, which is then a real reply in the conversation. This takes the
+    Automation permission for Mail (`com.apple.security.temporary-exception.apple-events`
+    and `NSAppleEventsUsageDescription`); macOS asks the person once. That exception
+    entitlement is fine for Developer ID distribution and would need review for the
+    Mac App Store.
+    Adding the attachment by script makes Mail write the reply's body again from what
+    the script can see, and the quote Mail had put there is lost. Sheaf therefore
+    writes the original's text into the reply itself, as plain quoted lines. Preview
+    keeps Mail's own rich quote; it does not go through scripting.
+    Plain quoted lines were not good enough: the thread did not look like one. Tried
+    against Mail, with the person's leave: a script sees none of a reply's quote, any
+    scripted attachment wipes it, and opening a file with Mail starts a new message.
+    What does work is a message file marked `X-Unsent: 1`: Mail opens it as a message
+    being written. So Sheaf asks Mail only for the original's source, and writes the
+    reply whole (`MailDraft`): To from Reply-To or From, "Re:" and the subject,
+    In-Reply-To and References, the original's own HTML (or its plain text) inside a
+    `blockquote type="cite"` under Mail's "On …, at …, … wrote:" line, the pictures the
+    text shows carried over by Content-ID, and the PDF. Mail then opens that file. The
+    From account is Mail's default one and the original is not marked as replied.

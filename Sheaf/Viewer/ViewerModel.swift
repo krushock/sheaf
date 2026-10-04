@@ -214,6 +214,9 @@ final class ViewerModel: NSObject {
         }
     }
 
+    /// Who sent the document, when it was opened from a message in Mail.
+    var mailOrigin: MailOrigin?
+
     /// Whether the background is being taken out of a picture.
     var isRemovingBackground = false
 

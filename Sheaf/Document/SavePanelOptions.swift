@@ -16,13 +16,31 @@ enum SavePanelOptions {
 
     /// Call with any document of the app. The first call for a class sets things up.
     static func install(for document: NSDocument) {
-        guard let kind = object_getClass(document), prepared.insert(ObjectIdentifier(kind)).inserted else { return }
+        guard let kind = object_getClass(document) else { return }
+        install(in: kind)
+    }
+
+    /// Sets a document class up. Done at launch for the classes SwiftUI has made for
+    /// the app's document types, before any document is read.
+    static func install(in kind: AnyClass) {
+        guard prepared.insert(ObjectIdentifier(kind)).inserted else { return }
         overridePreparing(in: kind)
         overrideSaving(in: kind)
+        MailReply.overrideReading(in: kind)
+        MailReply.overrideSavePanel(in: kind)
+        MailReply.overrideClosing(in: kind)
+    }
+
+    /// Sets up the classes of every kind of document the app opens.
+    static func installAtLaunch() {
+        let controller = NSDocumentController.shared
+        for type in SheafDocument.readableContentTypes {
+            if let kind = controller.documentClass(forType: type.identifier) { install(in: kind) }
+        }
     }
 
     /// Gives a class its own version of a method, which gets the one it had to call on.
-    private static func override(_ selector: Selector, in kind: AnyClass, with make: (IMP) -> Any) {
+    static func override(_ selector: Selector, in kind: AnyClass, with make: (IMP) -> Any) {
         guard let method = class_getInstanceMethod(kind, selector) else { return }
         let original = method_getImplementation(method)
         let replacement = imp_implementationWithBlock(make(original))
@@ -136,5 +154,6 @@ extension ViewerModel {
     func prepareSaveOptions() {
         Self.all.add(self)
         if let document = window?.windowController?.document as? NSDocument { SavePanelOptions.install(for: document) }
+        refreshMailOrigin()
     }
 }

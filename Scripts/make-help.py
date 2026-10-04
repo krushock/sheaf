@@ -51,6 +51,7 @@ PAGES = [
 <ul>
 <li>Double-click a PDF or picture in the Welcome window, drag one onto Sheaf's icon, or choose [[File > Open…]] {{⌘O}}.</li>
 <li>Pictures open as one-page documents. A protected PDF asks for its password.</li>
+<li>A PDF opened from a message in Mail can be sent back: [[File > Reply to Sender…]] opens a reply in Mail with the PDF attached and the earlier message quoted. Sheaf also offers this when you save or close such a PDF after changing it. It asks Mail which message the PDF came with, so macOS asks once whether Sheaf may control Mail, and the message has to be still selected there.</li>
 <li>To have PDFs open in Sheaf when you double-click them, choose it under <span class="menu">Default PDF app</span> in [[Sheaf > Settings…]]. Sheaf asks about this once, the first time it opens.</li>
 </ul>
 <h2>Move around</h2>

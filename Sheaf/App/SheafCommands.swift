@@ -37,6 +37,12 @@ struct SheafCommands: Commands {
                     .disabled(viewer?.canEditPages != true)
                 Button("Document Info…") { viewer?.activeSheet = .info }
                     .keyboardShortcut("i")
+                // For a document opened from a message in Mail: send it back to whoever sent it.
+                // Always in the menu, and dimmed for documents that did not come from Mail.
+                Divider()
+                // Who the sender is, is asked of Mail when the command is chosen.
+                Button("Reply to Sender…") { viewer?.replyInMail() }
+                    .disabled(viewer?.mailOrigin == nil || !MailReply.canCompose)
             }
             .disabled(viewer == nil)
         }
