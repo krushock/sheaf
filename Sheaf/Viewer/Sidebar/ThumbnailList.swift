@@ -48,7 +48,7 @@ struct ThumbnailList: View {
             Button("Delete") { viewer.deletePages([index]) }
                 .disabled(viewer.pageCount < 2)
             Divider()
-            Button("Insert Blank Page") { viewer.insertBlankPage(at: index + 1) }
+            BlankPageMenu("Insert Blank Page", viewer: viewer, index: index + 1)
             Button("Insert from File…") { viewer.chooseFilesToInsert(at: index + 1) }
         }
         .disabled(!viewer.canEditPages)

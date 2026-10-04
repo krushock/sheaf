@@ -31,6 +31,13 @@ struct SelectionGeometry {
     var pageIndex: Int
     var frame: PDFRectangle
     var handles: [(handle: ResizeHandle, point: PDFPoint)]
+    /// The corners of a thing that is turned, in place of its upright frame.
+    var outline: [PDFPoint]? = nil
+    /// Whether the thing is part of what the page itself draws, a picture or a block of
+    /// text, which gets the small square handles Pages puts on such things.
+    var isPicture = false
+    /// Whether a handle turns the thing while Command is held.
+    var canTurn = false
 }
 
 /// Editing annotations: tools, selection, dragging and the commands that act on them.
@@ -105,10 +112,12 @@ extension ViewerModel {
     func documentDidChange() {
         guard let sheafDocument else { return }
         if selection != nil, selectedAnnotation == nil { selection = nil }
+        contentDidChange()
         invalidateThumbnails(sheafDocument.lastChangedPages)
         for index in sheafDocument.lastChangedPages {
             if let page = document?.page(at: index) { pdfView.annotationsChanged(on: page) }
         }
+        hideNativeMarks()
         pdfView.overlay.needsDisplay = true
     }
 
@@ -260,14 +269,21 @@ extension ViewerModel {
             if let id = session.original?.objectID {
                 session.hidden = sheafDocument?.displayedAnnotation(id, onPage: session.pageIndex)
             }
-            // Annotations whose look only the file knows are moved as they are; everything
-            // else is redrawn in a stand-in while the drag lasts.
-            if session.draft.kind == .link || session.draft.appearance() != nil {
+            // What Sheaf draws itself follows the drag by being drawn again. Of the rest,
+            // annotations whose look only the file knows are moved as they are, and
+            // everything else is redrawn in a stand-in while the drag lasts.
+            if !session.draft.isDrawnSharply, session.draft.kind == .link || session.draft.appearance() != nil {
                 let preview = SheafAnnotation(model: session.draft, document: document)
                 page.addAnnotation(preview)
                 session.preview = preview
                 session.hidden?.shouldDisplay = false
             }
+        }
+        if session.draft.isDrawnSharply {
+            drag = session
+            pdfView.refreshAnnotationViews()
+            pdfView.overlay.needsDisplay = true
+            return
         }
         if let preview = session.preview {
             preview.update(session.draft, document: document)
@@ -279,15 +295,32 @@ extension ViewerModel {
         pdfView.overlay.needsDisplay = true
     }
 
+    /// The annotations of a page that Sheaf draws itself, as a drag or typing has them now.
+    func sharpAnnotations(onPage index: Int) -> [SharpAnnotation] {
+        guard let sheafDocument else { return [] }
+        var draft: (replacing: ObjectID?, annotation: Annotation)?
+        if let drag, drag.didMove, drag.pageIndex == index, drag.fieldTool == nil { draft = (drag.original?.objectID, drag.draft) }
+        let before = sheafDocument.nativeChanges
+        let result = sheafDocument.sharpAnnotations(onPage: index, draft: draft, hidden: Set([pdfView.editedAnnotationID].compactMap(\.self)))
+        // PDFKit takes its own drawing of an annotation away when told the page's annotations changed.
+        if sheafDocument.nativeChanges != before, let page = document?.page(at: index) { pdfView.annotationsChanged(on: page) }
+        return result
+    }
+
     func mouseUp() {
         guard let session = drag else { return }
         drag = nil
         if let page = document?.page(at: session.pageIndex) {
             if let preview = session.preview { page.removeAnnotation(preview) }
-            session.hidden?.shouldDisplay = true
-            if session.preview == nil, let original = session.original { session.hidden?.bounds = original.rect.cgRect }
+            if !session.draft.isDrawnSharply {
+                session.hidden?.shouldDisplay = true
+                if session.preview == nil, let original = session.original { session.hidden?.bounds = original.rect.cgRect }
+            }
             pdfView.annotationsChanged(on: page)
         }
+        // Back to how the document has things, until a change to it says otherwise.
+        pdfView.refreshAnnotationViews()
+        hideNativeMarks()
         pdfView.overlay.needsDisplay = true
 
         switch session.mode {
@@ -312,6 +345,12 @@ extension ViewerModel {
             }
             formTool = nil
             addField(fieldTool, rect: rect, pageIndex: session.pageIndex)
+            return
+        }
+        if session.draft.kind == .redact {
+            // A mark too small to be meant is dropped. The tool stays, since marks come in runs.
+            guard session.draft.rect.width >= 3, session.draft.rect.height >= 3 else { return }
+            add(session.draft, pageIndex: session.pageIndex, name: String(localized: "Mark for Redaction"))
             return
         }
         var annotation = session.draft
@@ -365,7 +404,7 @@ extension ViewerModel {
     // MARK: Changing the document
 
     @discardableResult
-    private func add(_ annotation: Annotation, pageIndex: Int, name: String) -> ObjectID? {
+    func add(_ annotation: Annotation, pageIndex: Int, name: String) -> ObjectID? {
         var stamped = annotation
         stamped.author = NSFullUserName()
         stamped.modified = now()
@@ -512,17 +551,14 @@ extension ViewerModel {
     // MARK: Text boxes
 
     func beginTextEditing(_ annotation: Annotation, pageIndex: Int, isNew: Bool) {
-        if let id = annotation.objectID {
-            sheafDocument?.displayedAnnotation(id, onPage: pageIndex)?.shouldDisplay = false
-        }
         pdfView.beginTextEditing(annotation, pageIndex: pageIndex, isNew: isNew)
+        // The box shows in its editor only while it is typed in.
+        pdfView.refreshAnnotationViews()
     }
 
     /// Stores what was typed into a text box.
     func commitText(_ text: String, annotation: Annotation, pageIndex: Int, isNew: Bool) {
-        if let id = annotation.objectID {
-            sheafDocument?.displayedAnnotation(id, onPage: pageIndex)?.shouldDisplay = true
-        }
+        defer { pdfView.refreshAnnotationViews() }
         var edited = annotation
         edited.contents = text
         fitHeight(of: &edited)

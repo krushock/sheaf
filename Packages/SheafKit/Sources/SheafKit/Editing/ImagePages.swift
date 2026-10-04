@@ -12,16 +12,7 @@ extension PDFEditor {
     ///   - index: Where the page goes. At the end when `nil`.
     @discardableResult
     public mutating func insertImagePage(_ data: Data, options: ImageDocumentOptions = ImageDocumentOptions(), at index: Int? = nil) throws -> ObjectID {
-        var image = try ImageReader.read(data)
-        if let mask = image.mask { image.stream.dictionary["SMask"] = .reference(add(.stream(mask))) }
-        if let profile = image.profile {
-            let stream = PDFStream(
-                dictionary: ["N": .integer(image.components), "Alternate": .name(image.components == 3 ? "DeviceRGB" : "DeviceGray"), "Filter": .name("FlateDecode")],
-                data: Flate.deflate(profile)
-            )
-            image.stream.dictionary["ColorSpace"] = [.name("ICCBased"), .reference(add(.stream(stream)))]
-        }
-        let picture = add(.stream(image.stream))
+        let (picture, image) = try addImageObject(data)
 
         let upright = image.uprightSize
         let margin = max(options.margin, 0)
@@ -49,6 +40,23 @@ extension PDFEditor {
         ])
         try insert([id], at: index ?? (try pageCount()))
         return id
+    }
+}
+
+extension PDFEditor {
+    /// Stores a picture file in the document as an image object, with its mask and color
+    /// profile if it has them.
+    mutating func addImageObject(_ data: Data) throws -> (id: ObjectID, image: PDFImage) {
+        var image = try ImageReader.read(data)
+        if let mask = image.mask { image.stream.dictionary["SMask"] = .reference(add(.stream(mask))) }
+        if let profile = image.profile {
+            let stream = PDFStream(
+                dictionary: ["N": .integer(image.components), "Alternate": .name(image.components == 3 ? "DeviceRGB" : "DeviceGray"), "Filter": .name("FlateDecode")],
+                data: Flate.deflate(profile)
+            )
+            image.stream.dictionary["ColorSpace"] = [.name("ICCBased"), .reference(add(.stream(stream)))]
+        }
+        return (add(.stream(image.stream)), image)
     }
 }
 

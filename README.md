@@ -17,6 +17,9 @@ make project   # generate Sheaf.xcodeproj
 make run       # build and launch
 make test      # engine tests
 make corpus    # engine against every PDF that ships with macOS and Xcode
+make strings   # sync the string catalog and apply the Russian translation
+make help-book # rewrite the Help Book from Scripts/make-help.py
+make release   # a disk image; see RELEASING.md for signing and notarizing
 ```
 
 [VERIFY.md](VERIFY.md) lists what has to be tried by hand, since the automated checks

@@ -185,9 +185,13 @@ enum AppearanceBuilder {
                 // The pen keeps its thickness relative to the signature as it is resized.
                 let width = lineWidth * min(rect.width, rect.height)
                 canvas.add("\(number(width)) w 1 J 1 j")
+                // The pen is as wide outside the points it passes through as inside them,
+                // so the points keep half its width clear of the edge, where the look ends.
+                let margin = min(width / 2, rect.width / 4, rect.height / 4)
+                let inner = PDFRectangle(x: rect.x + margin, y: rect.y + margin, width: rect.width - 2 * margin, height: rect.height - 2 * margin)
                 for stroke in strokes {
                     canvas.smoothStroke(
-                        through: stroke.map { PDFPoint(x: rect.x + $0.x * rect.width, y: rect.y + $0.y * rect.height) }, lineWidth: width
+                        through: stroke.map { PDFPoint(x: inner.x + $0.x * inner.width, y: inner.y + $0.y * inner.height) }, lineWidth: width
                     )
                 }
             case .shapes(let elements):
@@ -207,6 +211,20 @@ enum AppearanceBuilder {
                 canvas.images["Im0"] = image
                 canvas.add("q \(number(rect.width)) 0 0 \(number(rect.height)) \(number(rect.x)) \(number(rect.y)) cm /Im0 Do Q")
             }
+
+        case .redact:
+            // A red frame with a light wash: clearly a mark, with what is under it still readable.
+            let rect = annotation.rect
+            canvas.add("q")
+            canvas.useGraphicsState(opacity: 0.18, multiply: false)
+            canvas.fillColor(.red)
+            canvas.rectangle(rect)
+            canvas.add("f")
+            canvas.add("Q")
+            canvas.strokeColor(.red)
+            canvas.add("1 w")
+            canvas.rectangle(PDFRectangle(x: rect.x + 0.5, y: rect.y + 0.5, width: max(rect.width - 1, 0.1), height: max(rect.height - 1, 0.1)))
+            canvas.add("S")
 
         case .link, .other:
             return nil

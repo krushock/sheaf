@@ -154,6 +154,32 @@ struct AnnotationDisplay {
     }
 }
 
+extension Annotation {
+    /// Whether Sheaf draws the annotation over the page itself.
+    ///
+    /// PDFKit keeps every annotation in a layer of its own that holds one pixel for each
+    /// point of the page, whatever the zoom and the display. A signature or a drawing
+    /// goes blocky as soon as one zooms in. So annotations that are pictures are drawn
+    /// by `PageAnnotationView`, as the vectors they are, and PDFKit's own are switched
+    /// off. Highlights and the like are flat color, which PDFKit blends into the text
+    /// underneath; links and form fields are PDFKit's to handle.
+    var isDrawnSharply: Bool {
+        switch kind {
+        case .stamp, .ink, .square, .circle, .line, .freeText, .note: true
+        case .other: ["Polygon", "PolyLine", "Caret", "FileAttachment"].contains(subtype.rawValue)
+        case .highlight, .underline, .strikeOut, .link, .redact: false
+        }
+    }
+}
+
+/// An annotation for `PageAnnotationView` to draw: a one-page PDF of how it looks, and
+/// where on the page that goes.
+struct SharpAnnotation: Equatable {
+    var key: String
+    var frame: CGRect
+    var look: Data
+}
+
 /// An annotation drawn from the same instructions that are saved in the file, so what is
 /// on screen while editing is what the saved document shows.
 nonisolated final class SheafAnnotation: PDFAnnotation {

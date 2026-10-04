@@ -204,7 +204,7 @@ extension PDFEditor {
 
     /// One for gray, three for RGB, `nil` for color spaces whose numbers are not plain
     /// gray or RGB levels.
-    private func components(ofColorSpace object: PDFObject) throws -> Int? {
+    func components(ofColorSpace object: PDFObject) throws -> Int? {
         let space = try resolve(object)
         switch space.nameValue {
         case "DeviceGray", "CalGray": return 1

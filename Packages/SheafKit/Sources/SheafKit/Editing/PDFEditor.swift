@@ -1,5 +1,21 @@
 import Foundation
 
+/// Fonts read from a document, kept so each is read once.
+final class FontCache {
+    private var fonts: [ObjectID: (dictionary: PDFDictionary, font: PageFont)] = [:]
+
+    /// The font read from an object earlier, if the object still says the same.
+    func font(for id: ObjectID, _ dictionary: PDFDictionary) -> PageFont? {
+        guard let known = fonts[id], known.dictionary == dictionary else { return nil }
+        return known.font
+    }
+
+    func keep(_ font: PageFont, for id: ObjectID, _ dictionary: PDFDictionary) {
+        if fonts.count > 512 { fonts.removeAll() }
+        fonts[id] = (dictionary, font)
+    }
+}
+
 /// A document being edited: a file plus the objects that have been changed or added.
 ///
 /// The file itself is never touched. Copying an editor copies only the list of changes, so
@@ -12,6 +28,12 @@ public struct PDFEditor: ObjectSource {
     public private(set) var trailer: PDFDictionary
     /// Leaf streams brought in by imports, by content hash, so identical ones are stored once.
     var importedStreams: [Data: ObjectID] = [:]
+    /// Installed fonts put into the document for typed text, by name, with the objects
+    /// each is written to. A font gains glyphs as more is typed in it.
+    var typedFonts: [String: (font: EmbeddedFont, objects: EmbeddedFont.Objects)] = [:]
+    /// Fonts already read. Shared by copies of the editor, since reading a font is slow
+    /// and the same fonts are met on page after page.
+    let fontCache = FontCache()
 
     public init(_ file: PDFFile) {
         base = file
@@ -34,6 +56,11 @@ public struct PDFEditor: ObjectSource {
     }
 
     var changedNumbers: [Int] { changes.keys.sorted() }
+
+    /// Whether an object is still exactly what the file holds.
+    func isAsInFile(_ id: ObjectID) -> Bool {
+        changes[id.number] == nil && id.number < base.crossReference.nextObjectNumber
+    }
 
     /// Replaces an existing object.
     public mutating func set(_ object: PDFObject, for id: ObjectID) {

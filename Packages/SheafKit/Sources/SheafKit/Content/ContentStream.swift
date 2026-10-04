@@ -132,6 +132,12 @@ public struct ContentStream: Sendable, Equatable {
         return nil
     }
 
+    /// Operations read from text, free of the text they were read from, so they can be
+    /// put into another stream.
+    static func operations(parsing text: String) -> [Operation] {
+        ContentStream(data: Data(text.utf8)).operations.map { Operation($0.name, $0.operands, inlineImageData: $0.inlineImageData) }
+    }
+
     /// Whether the end of the stream could not be read as operations. Such a tail is still
     /// written back unchanged.
     public var hasUnreadableTail: Bool {

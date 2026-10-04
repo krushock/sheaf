@@ -96,6 +96,106 @@ nonisolated enum Toolbox {
         return try editor.serialized()
     }
 
+    // MARK: Finding text
+
+    /// Finds text on some pages. Safe to call from several threads at once, each call
+    /// reading the document for itself.
+    static func findText(_ source: Source, _ query: String, options: TextSearchOptions, pages: Range<Int>, isCancelled: @Sendable () -> Bool = { false }) throws -> [TextMatch] {
+        let editor = try source.editor()
+        var found: [TextMatch] = []
+        for index in pages {
+            if isCancelled() { throw CancellationError() }
+            found.append(contentsOf: (try? editor.findText(query, onPageAt: index, options: options)) ?? [])
+        }
+        return found
+    }
+
+    /// Finds text in the whole document, the pages shared out among the processor's cores.
+    static func findText(_ source: Source, _ query: String, options: TextSearchOptions, pageCount: Int, isCancelled: @escaping @Sendable () -> Bool = { false }) async throws -> [TextMatch] {
+        guard pageCount > 0 else { return [] }
+        let workers = max(min(ProcessInfo.processInfo.activeProcessorCount, pageCount / 8 + 1), 1)
+        let share = (pageCount + workers - 1) / workers
+        return try await withThrowingTaskGroup(of: (Int, [TextMatch]).self) { group in
+            for worker in 0..<workers {
+                let range = min(worker * share, pageCount)..<min((worker + 1) * share, pageCount)
+                guard !range.isEmpty else { continue }
+                group.addTask(priority: .userInitiated) {
+                    (worker, try findText(source, query, options: options, pages: range, isCancelled: isCancelled))
+                }
+            }
+            var parts: [(Int, [TextMatch])] = []
+            for try await part in group { parts.append(part) }
+            return parts.sorted { $0.0 < $1.0 }.flatMap(\.1)
+        }
+    }
+
+    /// Replaces every match of some text on the pages that have any.
+    ///
+    /// - Returns: The changed document, how many matches were replaced, and on which pages.
+    static func replaceAll(
+        _ source: Source, _ query: String, with replacement: String, options: TextSearchOptions, pages: [Int],
+        progress: (@Sendable (Double) -> Bool)? = nil
+    ) throws -> (data: Data, count: Int, pages: [Int]) {
+        var editor = try source.editor()
+        var total = 0
+        var changed: [Int] = []
+        for (position, index) in pages.enumerated() {
+            if let progress, !progress(Double(position) / Double(max(pages.count, 1))) { throw CancellationError() }
+            let result = try editor.replaceAll(query, with: replacement, options: options, onPagesAt: [index])
+            total += result.count
+            changed.append(contentsOf: result.pages)
+        }
+        return (total > 0 ? try editor.serialized() : source.data, total, changed)
+    }
+
+    // MARK: Converting
+
+    static func word(_ source: Source, progress: (@Sendable (Double) -> Bool)? = nil) throws -> Data {
+        try source.editor().wordDocument(title: source.name, progress: progress)
+    }
+
+    static func excel(_ source: Source, progress: (@Sendable (Double) -> Bool)? = nil) throws -> Data {
+        try source.editor().spreadsheet(progress: progress)
+    }
+
+    static func archival(_ source: Source) throws -> ArchivalResult {
+        try source.editor().archival()
+    }
+
+    /// Reads the text in pages that have none to select, and lays it over them invisibly.
+    ///
+    /// - Returns: The document, and how many pages text was found on.
+    static func recognizeText(_ source: Source, progress: (@Sendable (Double) -> Bool)? = nil) throws -> (data: Data, pages: Int) {
+        var editor = try source.editor()
+        guard let document = PDFDocument(data: source.data) else { throw ToolError.unreadable(source.name) }
+        if document.isLocked {
+            guard let password = source.password, document.unlock(withPassword: password) else { throw ToolError.protectedSource }
+        }
+        let count = try editor.pageCount()
+        var found = 0
+        for index in 0..<count {
+            if let progress, !progress(Double(index) / Double(max(count, 1))) { throw CancellationError() }
+            guard try !editor.hasText(onPageAt: index), let page = document.page(at: index),
+                  let picture = image(of: page, as: .png, resolution: 200, quality: 1)
+            else { continue }
+            let lines = TextRecognizer.recognize(inImageData: picture)
+            guard !lines.isEmpty else { continue }
+            try editor.addTextLayer(lines, toPageAt: index)
+            found += 1
+        }
+        return (found > 0 ? try editor.serialized() : source.data, found)
+    }
+
+    /// Makes annotations and filled-in form fields part of the pages.
+    static func flatten(_ source: Source, annotations: Bool, form: Bool) throws -> Data {
+        try edit(source) { editor in
+            if form { _ = try editor.flattenForm() }
+            if annotations {
+                for index in 0..<(try editor.pageCount()) { _ = try editor.flattenAnnotations(onPageAt: index) }
+            }
+        }
+    }
+
     // MARK: Pictures of pages
 
     /// Draws pages as pictures.

@@ -88,7 +88,10 @@ enum XMP {
     // MARK: Writing
 
     /// A packet saying what `info` says. Everything else an existing packet holds is kept.
-    static func updated(_ existing: Data?, with info: DocumentInfo) -> Data {
+    ///
+    /// - Parameter archival: Marks the document as following a part of the PDF/A
+    ///   standard at a level of conformance, as `(2, "B")` for PDF/A-2b.
+    static func updated(_ existing: Data?, with info: DocumentInfo, archival: (part: Int, conformance: String)? = nil) -> Data {
         let document = existing.flatMap { try? XMLDocument(data: $0) }.flatMap { descriptions(in: $0).isEmpty ? nil : $0 } ?? fresh()
         let all = descriptions(in: document)
         for description in all {
@@ -123,6 +126,25 @@ enum XMP {
                 element.addChild(container)
             }
             target.addChild(element)
+        }
+
+        if let archival {
+            let uri = "http://www.aiim.org/pdfa/ns/id/"
+            for name in ["part", "conformance"] {
+                for attribute in target.attributes ?? [] where attribute.localName == name && Self.uri(of: attribute) == uri {
+                    if let attributeName = attribute.name { target.removeAttribute(forName: attributeName) }
+                }
+                for element in target.elements(forLocalName: name, uri: uri) { element.detach() }
+            }
+            if target.resolvePrefix(forNamespaceURI: uri) != "pdfaid" {
+                target.addNamespace(XMLNode.namespace(withName: "pdfaid", stringValue: uri) as! XMLNode)
+            }
+            let part = XMLElement(name: "pdfaid:part", uri: uri)
+            part.stringValue = String(archival.part)
+            let conformance = XMLElement(name: "pdfaid:conformance", uri: uri)
+            conformance.stringValue = archival.conformance
+            target.addChild(part)
+            target.addChild(conformance)
         }
 
         guard let root = document.rootElement() else { return existing ?? Data() }

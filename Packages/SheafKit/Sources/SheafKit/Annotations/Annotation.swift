@@ -72,6 +72,9 @@ public struct StampImage: Sendable, Equatable {
 public struct Annotation: Sendable, Equatable, Identifiable {
     public enum Kind: String, Sendable, CaseIterable {
         case highlight, underline, strikeOut, note, freeText, square, circle, line, ink, stamp, link
+        /// A mark over something to be removed for good. Until redactions are applied it
+        /// is only a mark: what is under it is still in the document.
+        case redact
         /// Anything this engine does not model, such as form fields. Kept as it is.
         case other
     }
@@ -148,7 +151,7 @@ public struct Annotation: Sendable, Equatable, Identifiable {
 
     static let subtypes: [Kind: PDFName] = [
         .highlight: "Highlight", .underline: "Underline", .strikeOut: "StrikeOut", .note: "Text", .freeText: "FreeText",
-        .square: "Square", .circle: "Circle", .line: "Line", .ink: "Ink", .stamp: "Stamp", .link: "Link",
+        .square: "Square", .circle: "Circle", .line: "Line", .ink: "Ink", .stamp: "Stamp", .link: "Link", .redact: "Redact",
     ]
 
     /// Kinds that mark up a run of text.
@@ -159,7 +162,7 @@ public struct Annotation: Sendable, Equatable, Identifiable {
     /// Whether dragging a corner should change the annotation's size.
     public var isResizable: Bool {
         switch kind {
-        case .freeText, .square, .circle, .stamp, .link, .ink, .line: true
+        case .freeText, .square, .circle, .stamp, .link, .ink, .line, .redact: true
         // Form fields, which are moved and sized like anything else on the page.
         default: subtype == "Widget"
         }

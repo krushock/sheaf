@@ -1,3 +1,4 @@
+import SheafKit
 import SwiftUI
 
 /// Menu bar commands that act on the frontmost document window.
@@ -11,11 +12,19 @@ struct SheafCommands: Commands {
                 .keyboardShortcut("n", modifiers: [.command, .option])
             Button("New from Images…") { openWindow(id: ImagesWindow.windowID) }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
+            Divider()
+            Button("Compare Documents…") { openWindow(id: CompareWindow.windowID) }
+            Button("Flows…") { openWindow(id: FlowsWindow.windowID) }
         }
 
         CommandGroup(after: .saveItem) {
             Group {
                 Button("Export…") { viewer?.export() }
+                Menu("Export To") {
+                    Button("Word…") { viewer?.activeSheet = .exportWord }
+                    Button("Excel…") { viewer?.activeSheet = .exportExcel }
+                    Button("PDF/A…") { viewer?.activeSheet = .exportArchival }
+                }
                 Button("Export as Images…") { viewer?.activeSheet = .exportImages }
                 Button("Split into Documents…") { viewer?.activeSheet = .split }
                     .disabled((viewer?.pageCount ?? 0) < 2)
@@ -41,11 +50,24 @@ struct SheafCommands: Commands {
         CommandGroup(after: .pasteboard) {
             Divider()
             Menu("Insert") {
-                Button("Blank Page") { viewer?.insertBlankPage() }
+                if let viewer {
+                    BlankPageMenu("Blank Page", viewer: viewer)
+                } else {
+                    Button("Blank Page") {}
+                }
                 Button("Pages from File…") { viewer?.chooseFilesToInsert() }
                 Button("Pages from Scanner…") { viewer?.activeSheet = .scanner }
+                Divider()
+                Button("Text") {
+                    viewer?.isContentEditing = true
+                    viewer?.editTool = .text
+                }
+                Button("Picture…") { viewer?.choosePictureToAdd() }
             }
             .disabled(viewer?.canEditPages != true)
+            // Command-D does this while text or a picture is selected; see SheafPDFView.
+            Button("Duplicate") { viewer?.duplicateContentSelection() }
+                .disabled(viewer?.canArrangeContent != true)
             Menu("Find") {
                 Button("Find…") { viewer?.focusSearchField() }
                     .keyboardShortcut("f")
@@ -55,13 +77,17 @@ struct SheafCommands: Commands {
                 Button("Find Previous") { viewer?.selectPreviousSearchResult() }
                     .keyboardShortcut("g", modifiers: [.command, .shift])
                     .disabled(viewer?.searchResults.isEmpty ?? true)
+                Divider()
+                Button("Find and Replace…") { viewer?.showReplace() }
+                    .keyboardShortcut("f", modifiers: [.command, .option])
+                    .disabled(viewer?.sheafDocument?.isEditable != true)
             }
             .disabled(viewer == nil)
         }
 
         CommandGroup(replacing: .sidebar) {
             Group {
-                Toggle("Hide Sidebar", isOn: binding(false) { !$0.isSidebarVisible } set: { $0.isSidebarVisible = !$1 })
+                Toggle("Hide Sidebar", isOn: binding(false) { !$0.isSidebarVisible } set: { $0.setSidebarVisible(!$1) })
                     .keyboardShortcut("1", modifiers: [.command, .option])
                 ForEach(Array(SidebarMode.allCases.enumerated()), id: \.element) { offset, mode in
                     Toggle(mode.title, isOn: binding(false) { $0.isSidebarVisible && $0.sidebarMode == mode } set: { viewer, _ in viewer.showSidebar(mode) })
@@ -82,8 +108,10 @@ struct SheafCommands: Commands {
 
                 Button("Actual Size") { viewer?.zoomToActualSize() }
                     .keyboardShortcut("0")
-                Toggle("Zoom to Fit", isOn: binding(false) { $0.isFitToWindow } set: { viewer, _ in viewer.zoomToFit() })
+                Toggle("Fit Width", isOn: binding(false) { $0.isFitToWindow } set: { viewer, _ in viewer.zoomToFit() })
                     .keyboardShortcut("9")
+                Toggle("Fit Page", isOn: binding(false) { $0.isFitPage } set: { viewer, _ in viewer.zoomToFitPage() })
+                    .keyboardShortcut("8")
                 Button("Zoom In") { viewer?.zoomIn() }
                     .keyboardShortcut("+")
                     .disabled(!(viewer?.canZoomIn ?? false))
@@ -96,13 +124,62 @@ struct SheafCommands: Commands {
             .disabled(viewer == nil)
         }
 
-        InspectorCommands()
+        // The Format panel is Sheaf's own column, so the command that shows it is too.
+        CommandGroup(before: .sidebar) {
+            Button(viewer?.isInspectorVisible == true ? "Hide Inspector" : "Show Inspector") { viewer?.isInspectorVisible.toggle() }
+                .keyboardShortcut("i", modifiers: [.command, .control])
+                .disabled(viewer == nil)
+        }
         ImportFromDevicesCommands()
+
+        CommandMenu("Arrange") {
+            let moves = viewer?.stackingMoves ?? []
+            // The order and the shortcuts are those of the Arrange menu in Pages.
+            Button(StackingMove.forward.title) { viewer?.restackSelection(.forward) }
+                .keyboardShortcut("f", modifiers: [.command, .shift, .option])
+                .disabled(!moves.contains(.forward))
+            Button(StackingMove.toFront.title) { viewer?.restackSelection(.toFront) }
+                .keyboardShortcut("f", modifiers: [.command, .shift])
+                .disabled(!moves.contains(.toFront))
+            Button(StackingMove.backward.title) { viewer?.restackSelection(.backward) }
+                .keyboardShortcut("b", modifiers: [.command, .shift, .option])
+                .disabled(!moves.contains(.backward))
+            Button(StackingMove.toBack.title) { viewer?.restackSelection(.toBack) }
+                .keyboardShortcut("b", modifiers: [.command, .shift])
+                .disabled(!moves.contains(.toBack))
+
+            Divider()
+
+            Menu("Align on Page") {
+                ForEach(PageAlignment.allCases) { alignment in
+                    if alignment == .top { Divider() }
+                    Button(alignment.title, systemImage: alignment.systemImage) { viewer?.alignSelection(alignment) }
+                }
+            }
+            .disabled(viewer?.canArrangeContent != true)
+
+            Divider()
+
+            Button("Flip Horizontally") { viewer?.flipSelectedPicture(horizontally: true) }
+                .disabled(viewer?.canArrangeContent != true || viewer?.selectedImage == nil)
+            Button("Flip Vertically") { viewer?.flipSelectedPicture(horizontally: false) }
+                .disabled(viewer?.canArrangeContent != true || viewer?.selectedImage == nil)
+
+            Divider()
+
+            Button("Edit Mask") { viewer?.beginMaskEditing() }
+                .disabled(viewer?.canArrangeContent != true || viewer?.selectedImage == nil)
+            Button("Reset Mask") { viewer?.resetMask() }
+                .disabled(viewer?.selectedImage?.shownPart == nil && viewer?.maskEdit == nil)
+        }
 
         CommandMenu("Tools") {
             Group {
                 Toggle("Show Markup Toolbar", isOn: binding(false) { $0.isMarkupVisible } set: { $0.isMarkupVisible = $1 })
                     .keyboardShortcut("a", modifiers: [.command, .shift])
+
+                Toggle("Show Edit Toolbar", isOn: binding(false) { $0.isContentEditing } set: { $0.isContentEditing = $1 })
+                    .keyboardShortcut("e", modifiers: [.command, .shift])
 
                 Menu("Annotate") {
                     tool(.highlight, "h")
@@ -132,8 +209,9 @@ struct SheafCommands: Commands {
                 Divider()
 
                 Menu("Form") {
+                    // Shift-Command-F is Bring to Front, as in Pages.
                     Toggle("Show Form Toolbar", isOn: binding(false) { $0.isFormEditing } set: { $0.isFormEditing = $1 })
-                        .keyboardShortcut("f", modifiers: [.command, .shift])
+                        .keyboardShortcut("m", modifiers: [.command, .shift])
                     Menu("Add Field") {
                         ForEach(FormTool.allCases) { tool in
                             Button(tool.title) {
@@ -155,6 +233,44 @@ struct SheafCommands: Commands {
                         .disabled(viewer?.hasForm != true)
                     Button("Flatten Form…") { viewer?.isFlattenFormConfirmationPresented = true }
                         .disabled(viewer?.hasForm != true)
+                }
+
+                Menu("Redact") {
+                    Button("Mark Selected Text") { viewer?.markSelectionForRedaction() }
+                        .disabled(viewer?.hasTextSelection != true)
+                    Button("Draw Marks") {
+                        viewer?.isContentEditing = true
+                        viewer?.editTool = .redact
+                    }
+                    Menu("Find and Mark") {
+                        ForEach(RedactionPattern.allCases) { pattern in
+                            Button(pattern.title) {
+                                viewer?.isContentEditing = true
+                                viewer?.markForRedaction(pattern)
+                            }
+                        }
+                    }
+                    Divider()
+                    Toggle("Preview Redactions", isOn: binding(false) { $0.previewsRedactions } set: { $0.previewsRedactions = $1 })
+                        .disabled((viewer?.redactionMarkCount ?? 0) == 0)
+                    Button("Remove All Marks") { viewer?.removeRedactionMarks() }
+                        .disabled((viewer?.redactionMarkCount ?? 0) == 0)
+                    Button("Apply Redactions…") { viewer?.isApplyRedactionsConfirmationPresented = true }
+                        .disabled((viewer?.redactionMarkCount ?? 0) == 0)
+                }
+
+                Button("Recognize Text…") { viewer?.activeSheet = .recognize }
+
+                Button("Compare with…") { viewer?.compareWithAnother() }
+                    .keyboardShortcut("k", modifiers: [.command, .shift])
+
+                Menu("Run Flow") {
+                    ForEach(FlowStore.shared.flows) { flow in
+                        Button(flow.name) { viewer?.run(flow) }
+                            .disabled(flow.steps.isEmpty)
+                    }
+                    Divider()
+                    Button("Edit Flows…") { openWindow(id: FlowsWindow.windowID) }
                 }
 
                 Divider()

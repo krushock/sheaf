@@ -296,7 +296,21 @@ final class OrganizerCollectionView: NSCollectionView {
         }
         add(String(localized: "Paste"), #selector(paste(_:)), enabled: viewer.canPastePages)
         menu.addItem(.separator())
-        add(String(localized: "Insert Blank Page"), #selector(insertBlankPage(_:)))
+        // A size for the blank page: one the document has, a common paper, or any other.
+        let blank = NSMenuItem(title: String(localized: "Insert Blank Page"), action: nil, keyEquivalent: "")
+        let sizes = NSMenu()
+        func addSize(_ title: String, _ size: PageSize) {
+            let item = sizes.addItem(withTitle: title, action: #selector(insertBlankPage(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = NSValue(size: CGSize(width: size.width, height: size.height))
+        }
+        for choice in viewer.documentPageSizes() { addSize(choice.title, choice.size) }
+        sizes.addItem(.separator())
+        for paper in Paper.ordered { addSize(paper.title, paper.size) }
+        sizes.addItem(.separator())
+        sizes.addItem(withTitle: String(localized: "Other Size…"), action: #selector(chooseBlankPageSize(_:)), keyEquivalent: "").target = self
+        blank.submenu = sizes
+        menu.addItem(blank)
         add(String(localized: "Insert from File…"), #selector(insertFromFile(_:)))
         if hasTargets {
             menu.addItem(.separator())
@@ -313,7 +327,12 @@ final class OrganizerCollectionView: NSCollectionView {
     @objc func delete(_ sender: Any?) { viewer.map { $0.deletePages($0.targetPageIndexes) } }
     @objc func copy(_ sender: Any?) { viewer.map { $0.copyPages($0.targetPageIndexes) } }
     @objc func paste(_ sender: Any?) { viewer?.pastePages() }
-    @objc func insertBlankPage(_ sender: Any?) { viewer?.insertBlankPage() }
+    @objc func insertBlankPage(_ sender: Any?) {
+        let size = ((sender as? NSMenuItem)?.representedObject as? NSValue)?.sizeValue
+        viewer?.insertBlankPage(size: size.map { PageSize(width: $0.width, height: $0.height) })
+    }
+
+    @objc func chooseBlankPageSize(_ sender: Any?) { viewer?.chooseBlankPageSize() }
     @objc func insertFromFile(_ sender: Any?) { viewer?.chooseFilesToInsert() }
     @objc func extract(_ sender: Any?) { viewer.map { $0.extractPages($0.targetPageIndexes) } }
 

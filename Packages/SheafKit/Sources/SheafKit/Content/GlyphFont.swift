@@ -34,7 +34,11 @@ struct GlyphFont {
     }
 
     /// Adds the font to a document.
-    func add(to editor: inout PDFEditor) -> ObjectID {
+    ///
+    /// - Parameter name: A name no other font in the document has. Readers tell fonts of
+    ///   this kind apart by their names and their glyphs' names, and mix up the text of
+    ///   two that share them.
+    func add(to editor: inout PDFEditor, named name: String) -> ObjectID {
         func number(_ value: Double) -> String { Serializer.format((value * 100).rounded() / 100) }
         var procedures: PDFDictionary = [:]
         var names: [PDFObject] = [0]
@@ -63,9 +67,9 @@ struct GlyphFont {
                 // A space, or anything else with nothing to draw.
                 content = "\(number(entry.advance)) 0 d0\n"
             }
-            let name = PDFName("g\(code)")
-            procedures[name] = .reference(editor.add(.stream(PDFStream(dictionary: ["Filter": .name("FlateDecode")], data: Flate.deflate(Data(content.utf8))))))
-            names.append(.name(name))
+            let glyphName = PDFName("\(name)g\(code)")
+            procedures[glyphName] = .reference(editor.add(.stream(PDFStream(dictionary: ["Filter": .name("FlateDecode")], data: Flate.deflate(Data(content.utf8))))))
+            names.append(.name(glyphName))
             widths.append(.real((entry.advance * 100).rounded() / 100))
             if !entry.text.isEmpty {
                 let units = entry.text.utf16.map { String(format: "%04X", $0) }.joined()
@@ -94,7 +98,7 @@ struct GlyphFont {
         let toUnicode = editor.add(.stream(PDFStream(dictionary: ["Filter": .name("FlateDecode")], data: Flate.deflate(Data(map.utf8)))))
 
         return editor.add([
-            "Type": .name("Font"), "Subtype": .name("Type3"),
+            "Type": .name("Font"), "Subtype": .name("Type3"), "Name": .name(PDFName(name)),
             "FontBBox": [.real(box.minX.rounded(.down)), .real(box.minY.rounded(.down)), .real(box.maxX.rounded(.up)), .real(box.maxY.rounded(.up))],
             "FontMatrix": [.real(0.001), 0, 0, .real(0.001), 0, 0],
             "CharProcs": .dictionary(procedures),
@@ -108,26 +112,76 @@ struct GlyphFont {
 /// Text placed glyph by glyph, with the fonts it needs.
 struct GlyphText {
     private(set) var fonts: [GlyphFont] = [GlyphFont()]
+    private var embedded: [EmbeddedFont] = []
+    /// Which of them this text is set in.
+    private var usedEmbedded: Set<Int> = []
+    /// Fonts that turned out not to be of a kind that can be put in a document.
+    private var notEmbeddable: Set<String> = []
     private(set) var operators = ""
-    private var currentFont = -1
+    /// The resource name of the font the last glyph was set in.
+    private var currentFont = ""
+    /// What the fonts' resource names start with. It has to differ between pieces of
+    /// text that end up in the same page's resources.
+    var prefix = "SheafF"
+    /// Puts the installed fonts themselves in the document where their kind allows it,
+    /// so the text is drawn like any other text. Otherwise, and for fonts of other
+    /// kinds, glyphs are drawn from their outlines.
+    var embedsFonts = false
+
+    /// Makes the next glyph name its font again, after something else changed the font.
+    mutating func forgetFont() { currentFont = "" }
+
+    /// Takes the operators written so far, leaving the fonts in place for more text.
+    mutating func takeOperators() -> String {
+        defer { operators = "" }
+        return operators
+    }
 
     var isEmpty: Bool { operators.isEmpty }
+
+    /// Starts from the installed fonts a document already carries, so that more text in
+    /// the same font adds glyphs to the font that is there and not another copy of it.
+    mutating func continueFonts(of editor: PDFEditor) {
+        guard embedsFonts else { return }
+        embedded = editor.typedFonts.keys.sorted().compactMap { editor.typedFonts[$0]?.font }
+    }
+
+    private mutating func embeddedIndex(for fontName: String) -> Int? {
+        if let index = embedded.firstIndex(where: { $0.fontName == fontName }) { return index }
+        guard !notEmbeddable.contains(fontName) else { return nil }
+        guard let font = EmbeddedFont(fontName: fontName) else {
+            notEmbeddable.insert(fontName)
+            return nil
+        }
+        embedded.append(font)
+        return embedded.count - 1
+    }
 
     /// Adds a line whose left end and baseline are at a point.
     mutating func add(_ line: TextOutliner.ShapedLine, x: Double, baseline: Double, fontSize: Double) {
         for glyph in line.glyphs {
-            var code = fonts[fonts.count - 1].code(for: glyph)
-            if code == nil {
-                fonts.append(GlyphFont())
-                code = fonts[fonts.count - 1].code(for: glyph)
+            let resource: String
+            let code: String
+            if embedsFonts, let slot = embeddedIndex(for: glyph.fontName), let cid = embedded[slot].code(for: glyph) {
+                usedEmbedded.insert(slot)
+                resource = "\(prefix)E\(slot)"
+                code = String(format: "%04X", cid)
+            } else {
+                var entry = fonts[fonts.count - 1].code(for: glyph)
+                if entry == nil {
+                    fonts.append(GlyphFont())
+                    entry = fonts[fonts.count - 1].code(for: glyph)
+                }
+                guard let entry else { continue }
+                resource = "\(prefix)\(fonts.count - 1)"
+                code = String(format: "%02X", entry)
             }
-            guard let code else { continue }
-            if currentFont != fonts.count - 1 {
-                currentFont = fonts.count - 1
-                operators += "/SheafF\(currentFont) \(Serializer.format(fontSize)) Tf\n"
+            if currentFont != resource {
+                currentFont = resource
+                operators += "/\(resource) \(Serializer.format(fontSize)) Tf\n"
             }
             // Each glyph is put exactly where the layout put it, kerning included.
-            operators += "1 0 0 1 \(Serializer.format(x + glyph.x)) \(Serializer.format(baseline + glyph.y)) Tm <\(String(format: "%02X", code))> Tj\n"
+            operators += "1 0 0 1 \(Serializer.format(x + glyph.x)) \(Serializer.format(baseline + glyph.y)) Tm <\(code)> Tj\n"
         }
     }
 
@@ -135,7 +189,14 @@ struct GlyphText {
     func fontResources(in editor: inout PDFEditor) -> PDFDictionary {
         var resources: PDFDictionary = [:]
         for (index, font) in fonts.enumerated() where !font.isEmpty {
-            resources[PDFName("SheafF\(index)")] = .reference(font.add(to: &editor))
+            // The object number makes the name unique in the document.
+            let name = "\(prefix)\(index)n\(editor.nextObjectNumber)"
+            resources[PDFName("\(prefix)\(index)")] = .reference(font.add(to: &editor, named: name))
+        }
+        for (index, font) in embedded.enumerated() where usedEmbedded.contains(index) {
+            guard let objects = font.write(to: &editor, over: editor.typedFonts[font.fontName]?.objects) else { continue }
+            editor.typedFonts[font.fontName] = (font, objects)
+            resources[PDFName("\(prefix)E\(index)")] = .reference(objects.font)
         }
         return resources
     }

@@ -108,6 +108,32 @@ import Testing
         if let widget = (try? forms.formFields())?.last?.widgets.first { _ = try? forms.removeWidget(widget.id) }
         _ = try? forms.flattenForm()
         _ = try? forms.serialized()
+
+        // Converting and comparing.
+        let converting = PDFEditor(file)
+        _ = try? converting.wordDocument()
+        _ = try? converting.spreadsheet()
+        _ = try? converting.archival()
+        if let comparison = try? DocumentComparer.compare(converting, converting) {
+            _ = try? comparison.report(nameA: "a", nameB: "b", pageSize: PageSize(width: 612, height: 792), date: "today")
+        }
+
+        // Content: read, change text and pictures, find, redact, add a text layer.
+        var content = PDFEditor(file)
+        if let page = try? content.pageContent(at: 0) {
+            if let block = page.blocks.first(where: \.isEditable) {
+                _ = try? content.replaceText(ofBlock: block.id, onPageAt: 0, with: "Fuzz " + block.flowingText + " Ж")
+                _ = try? content.moveText(ofBlock: block.id, onPageAt: 0, dx: 3, dy: -3)
+            }
+            if let image = page.images.first {
+                _ = try? content.setImageFrame(PDFRectangle(x: 5, y: 5, width: 40, height: 40), ofImage: image.id, onPageAt: 0)
+            }
+        }
+        _ = try? content.replaceAll("e", with: "ee", onPagesAt: [0])
+        _ = try? content.addText("Fuzz", toPageAt: 0, at: PDFPoint(x: 10, y: 100))
+        _ = try? content.redact([PDFRectangle(x: 0, y: 0, width: 300, height: 400)], onPageAt: 0)
+        _ = try? content.addTextLayer([RecognizedText(text: "Fuzz", frame: PDFRectangle(x: 0.1, y: 0.1, width: 0.5, height: 0.05))], toPageAt: 0)
+        if let saved = try? content.rewritten() { _ = try? PDFEditor(PDFFile(data: saved, password: password)).pageContent(at: 0) }
     }
 
     @Test(arguments: [Fixture.text3Pages, .handwritten, .outlineAnnotations, .encrypted])

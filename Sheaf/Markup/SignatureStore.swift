@@ -77,8 +77,9 @@ enum SignatureMaker {
         let normalized = strokes.filter { !$0.isEmpty }.map { stroke in
             stroke.map { PDFPoint(x: ($0.x - bounds.x) / width, y: ($0.y - bounds.y) / height) }
         }
-        // The pen was about two and a half points wide where it was drawn.
-        return SavedSignature(content: .strokes(normalized, lineWidth: 2.5 / min(width, height)), aspectRatio: width / height)
+        // The pen was two and a half points wide where it was drawn. The points are kept
+        // without it, and the pen's width is added around them wherever they are shown.
+        return SavedSignature(content: .strokes(normalized, lineWidth: 2.5 / (min(width, height) + 2.5)), aspectRatio: (width + 2.5) / (height + 2.5))
     }
 
     /// A name set in a script typeface, as outlines.

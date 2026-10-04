@@ -367,5 +367,11 @@ extension CorpusTests {
             do { _ = try file.object(ObjectID(number)) } catch { print("debug: object \(number): \(error)") }
             if file.wasRepaired != before { print("debug: reading object \(number) forced a repair") }
         }
+        // The first page's own drawing, an operation to a line.
+        let content = try PDFEditor(file).contentStream(forPageAt: 0)
+        for (index, operation) in content.operations.prefix(400).enumerated() {
+            let operands = operation.operands.map { String(decoding: Serializer.data($0), as: UTF8.self) }.joined(separator: " ")
+            print("debug: \(index): \(String(operands.prefix(120))) \(operation.name)")
+        }
     }
 }

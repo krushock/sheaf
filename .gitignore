@@ -6,3 +6,4 @@ xcuserdata/
 *.xcuserstate
 # Generated from project.yml by `make project`
 /Sheaf.xcodeproj/
+__pycache__/

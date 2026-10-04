@@ -138,6 +138,7 @@ extension ViewerModel {
         selection = nil
         if isFormEditing {
             isMarkupVisible = false
+            isContentEditing = false
             isInspectorVisible = true
         }
         pdfView.overlay.needsDisplay = true

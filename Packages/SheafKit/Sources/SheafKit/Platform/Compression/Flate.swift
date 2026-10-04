@@ -47,6 +47,33 @@ enum Flate {
         }
     }
 
+    /// The checksum zip archives keep of each file.
+    static func checksum(_ data: Data) -> UInt32 {
+        data.withUnsafeBytes { bytes in
+            UInt32(truncatingIfNeeded: crc32(0, bytes.bindMemory(to: UInt8.self).baseAddress, UInt32(bytes.count)))
+        }
+    }
+
+    /// Compresses without the zlib wrapper, as zip archives store their files.
+    static func rawDeflate(_ data: Data) -> Data? {
+        var stream = z_stream()
+        guard deflateInit2_(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY, ZLIB_VERSION, Int32(MemoryLayout<z_stream>.size)) == Z_OK else { return nil }
+        defer { deflateEnd(&stream) }
+        var output = [UInt8](repeating: 0, count: Int(deflateBound(&stream, UInt(data.count))) + 16)
+        var finished = false
+        let written = data.withUnsafeBytes { (input: UnsafeRawBufferPointer) -> Int in
+            stream.next_in = UnsafeMutablePointer(mutating: input.bindMemory(to: UInt8.self).baseAddress)
+            stream.avail_in = UInt32(input.count)
+            return output.withUnsafeMutableBufferPointer { buffer -> Int in
+                stream.next_out = buffer.baseAddress
+                stream.avail_out = UInt32(buffer.count)
+                finished = zlib.deflate(&stream, Z_FINISH) == Z_STREAM_END
+                return buffer.count - Int(stream.avail_out)
+            }
+        }
+        return finished ? Data(output.prefix(written)) : nil
+    }
+
     static func deflate(_ data: Data) -> Data {
         var stream = z_stream()
         guard deflateInit_(&stream, Z_DEFAULT_COMPRESSION, ZLIB_VERSION, Int32(MemoryLayout<z_stream>.size)) == Z_OK else { return data }

@@ -1,12 +1,19 @@
 import SwiftUI
 
 struct SettingsView: View {
+    private enum Pane: String {
+        case general, viewing
+    }
+
+    /// The pane last looked at, which Settings opens on again.
+    @AppStorage("settings.pane") private var pane = Pane.general
+
     var body: some View {
-        TabView {
-            Tab("General", systemImage: "gearshape") {
+        TabView(selection: $pane) {
+            Tab("General", systemImage: "gearshape", value: Pane.general) {
                 GeneralSettings()
             }
-            Tab("Viewing", systemImage: "doc.text.magnifyingglass") {
+            Tab("Viewing", systemImage: "doc.text.magnifyingglass", value: Pane.viewing) {
                 ViewingSettings()
             }
         }
@@ -23,6 +30,14 @@ private struct GeneralSettings: View {
             Toggle("Show Welcome window when Sheaf opens", isOn: $showWelcomeAtLaunch)
             Picker("New document page size", selection: $newDocumentPaper) {
                 ForEach(NewDocumentPaper.allCases) { Text($0.title).tag($0) }
+            }
+            Section {
+                DefaultPDFAppPicker()
+            } footer: {
+                Text("The app that opens a PDF when you double-click it in the Finder.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .formStyle(.grouped)

@@ -77,6 +77,15 @@ final class SheafDocument: ReferenceFileDocument {
     @ObservationIgnored weak var undoManager: UndoManager?
 
     @ObservationIgnored private var display = AnnotationDisplay()
+    /// The looks of annotations drawn over the page, kept while the annotation stays as it is.
+    @ObservationIgnored private var sharpLooks: [ObjectID: (model: Annotation, item: SharpAnnotation?)] = [:]
+    /// PDFKit's annotations that are switched off because Sheaf draws them.
+    @ObservationIgnored private let hiddenNatives = NSHashTable<PDFAnnotation>.weakObjects()
+    /// Goes up each time one is switched off, so PDFKit can be told to draw the page again.
+    @ObservationIgnored private(set) var nativeChanges = 0
+    /// Posted when what is on the pages changed, straight away, so drawing can keep up
+    /// within the same turn of the run loop.
+    static let didChangeDisplay = Notification.Name("SheafDocumentDidChangeDisplay")
     @ObservationIgnored private var undoStates: [UUID: (editor: PDFEditor, effect: EditEffect, password: String?)] = [:]
     @ObservationIgnored private var lastCoalescing: (key: String, time: Date)?
 
@@ -118,8 +127,15 @@ final class SheafDocument: ReferenceFileDocument {
     /// Parses the document. Called when its window appears.
     func loadIfNeeded() {
         guard pdf == nil else { return }
+        let start = Date()
         pdf = PDFDocument(data: contents.data)
+        let afterPDFKit = Date()
         openEngine(password: nil)
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "SnapshotTimings") {
+            print("TIMING open: PDFKit \(Int(afterPDFKit.timeIntervalSince(start) * 1000)) ms, engine \(Int(Date().timeIntervalSince(afterPDFKit) * 1000)) ms, \(contents.data.count / 1_048_576) MB")
+        }
+        #endif
         generation += 1
     }
 
@@ -169,6 +185,9 @@ final class SheafDocument: ReferenceFileDocument {
             }
         } catch {
             // Keep the last good snapshot rather than save something half-made.
+            #if DEBUG
+            print("SAVE snapshot failed: \(error)")
+            #endif
             return
         }
         saved.withLock { $0 = snapshot }
@@ -223,12 +242,20 @@ final class SheafDocument: ReferenceFileDocument {
         editor = next
         lastChangedPages = effect.pages
         revision += 1
+        let start = Date()
         refreshSaveSnapshot()
+        let afterSnapshot = Date()
         if effect.reloadsDisplay {
             reloadDisplay()
         } else if let pdf {
             for page in effect.pages { display.sync(page: page, of: pdf, with: next) }
         }
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "SnapshotTimings") {
+            print("TIMING install: snapshot \(Int(afterSnapshot.timeIntervalSince(start) * 1000)) ms, display \(Int(Date().timeIntervalSince(afterSnapshot) * 1000)) ms, reload=\(effect.reloadsDisplay)")
+        }
+        #endif
+        NotificationCenter.default.post(name: Self.didChangeDisplay, object: self)
         guard let previous, let undoManager else { return }
         let token = UUID()
         undoStates[token] = (previous, effect, previousPassword ?? password)
@@ -236,6 +263,20 @@ final class SheafDocument: ReferenceFileDocument {
             MainActor.assumeIsolated { document.restore(token) }
         }
         if let name, !undoManager.isUndoing, !undoManager.isRedoing { undoManager.setActionName(name) }
+        nudgeRunLoop()
+    }
+
+    /// AppKit closes an undo step, and only then counts the document as changed, at the
+    /// end of handling an event. A change that arrives any other way, as the result of
+    /// background work does, would leave the step open and the document looking unchanged
+    /// until the next event, and quitting in between would not save it. An empty event
+    /// gives AppKit its cue at once.
+    private func nudgeRunLoop() {
+        guard let event = NSEvent.otherEvent(
+            with: .applicationDefined, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+            windowNumber: 0, context: nil, subtype: 0, data1: 0, data2: 0
+        ) else { return }
+        NSApp.postEvent(event, atStart: false)
     }
 
     private func restore(_ token: UUID) {
@@ -255,6 +296,7 @@ final class SheafDocument: ReferenceFileDocument {
         pdf = document
         reloadedData = data
         display = AnnotationDisplay(base: editor)
+        sharpLooks = [:]
         generation += 1
     }
 
@@ -284,6 +326,63 @@ final class SheafDocument: ReferenceFileDocument {
     func objectID(of annotation: PDFAnnotation, onPage index: Int) -> ObjectID? {
         guard let pdf else { return nil }
         return display.objectID(of: annotation, page: index, of: pdf)
+    }
+
+    /// The annotations of a page that are drawn over it as vectors, in the order they
+    /// lie in. PDFKit's own drawing of each is switched off as it is handed out.
+    ///
+    /// - Parameters:
+    ///   - draft: An annotation as a drag has it now, standing in for the one with the
+    ///     number given, or added to the page when that is `nil`.
+    ///   - hidden: Annotations to leave out, such as a text box being typed in.
+    func sharpAnnotations(onPage index: Int, draft: (replacing: ObjectID?, annotation: Annotation)? = nil, hidden: Set<ObjectID> = []) -> [SharpAnnotation] {
+        guard let editor, let pdf else { return [] }
+        var result: [SharpAnnotation] = []
+        var live: Set<ObjectID> = []
+        for model in (try? editor.annotations(onPageAt: index)) ?? [] {
+            guard model.isDrawnSharply, let id = model.objectID else { continue }
+            live.insert(id)
+            var item: SharpAnnotation?
+            if let draft, draft.replacing == id {
+                // Its look as it is being changed, or the look it has in the file stretched over where it is now.
+                let moved = draft.annotation
+                if let appearance = moved.appearance() {
+                    item = SharpAnnotation(key: "\(id.number)", frame: appearance.bounds.cgRect, look: appearance.previewPDF())
+                } else if let stored = sharpLooks[id]?.item?.look ?? (try? editor.storedAppearancePreview(of: id)) {
+                    item = SharpAnnotation(key: "\(id.number)", frame: moved.rect.cgRect, look: stored)
+                }
+            } else if let known = sharpLooks[id], known.model == model {
+                item = known.item
+            } else if let stored = try? editor.storedAppearancePreview(of: id) {
+                // What the file holds, which is what any reader will show.
+                item = SharpAnnotation(key: "\(id.number)", frame: model.rect.cgRect, look: stored)
+                sharpLooks[id] = (model, item)
+            } else {
+                sharpLooks[id] = (model, nil)
+            }
+            // Without a look of its own in the file, PDFKit goes on drawing it.
+            guard let item else { continue }
+            if let native = display.annotation(for: id, page: index, of: pdf), native.shouldDisplay {
+                native.shouldDisplay = false
+                hiddenNatives.add(native)
+                nativeChanges += 1
+            }
+            if !hidden.contains(id) { result.append(item) }
+        }
+        if let draft, draft.replacing == nil, draft.annotation.isDrawnSharply, let appearance = draft.annotation.appearance() {
+            result.append(SharpAnnotation(key: "new", frame: appearance.bounds.cgRect, look: appearance.previewPDF()))
+        }
+        return result
+    }
+
+    /// Runs something that draws a page through PDFKit, such as making a thumbnail, with
+    /// the annotations Sheaf draws itself switched back on for the moment.
+    func withAllAnnotationsDrawnByPDFKit<Result>(onPage index: Int, _ body: () -> Result) -> Result {
+        guard let page = pdf?.page(at: index) else { return body() }
+        let hidden = page.annotations.filter { hiddenNatives.contains($0) && !$0.shouldDisplay }
+        for annotation in hidden { annotation.shouldDisplay = true }
+        defer { for annotation in hidden { annotation.shouldDisplay = false } }
+        return body()
     }
 
     /// The PDFKit annotation showing one of the document's annotations.

@@ -12,6 +12,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.servicesProvider = services
         NSUpdateDynamicServices()
+        TitleBarDoubleClick.install()
+        DefaultPDFApp.askOnceIfNeeded()
     }
 
     #if DEBUG

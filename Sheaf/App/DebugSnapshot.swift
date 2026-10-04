@@ -20,12 +20,18 @@ import UniformTypeIdentifiers
 /// `-SnapshotSidebar hidden|thumbnails|tableOfContents|annotations`, `-SnapshotSearch <text>`,
 /// `-SnapshotLayout continuous|singlePage|twoPages`, `-SnapshotPage <number>`,
 /// `-SnapshotGoToPage YES`, `-SnapshotExport <extension>` (prints `EXPORT` lines),
-/// `-SnapshotAction print|exportPanel|duplicate|revert`,
+/// `-SnapshotAction print|exportPanel|duplicate|revert|saveAs|saveWith:<archival+screen+jpeg+password>`,
 /// `-SnapshotMarkup tools,restyle,undo,redo,save,flatten,bookmarks,reply,existing,mouse,typing,
 /// signatures,signatureSheet` (steps run in order),
-/// `-SnapshotPages organize,select:1-3,rotate,move:1,duplicate,delete,blank,split,insert:<path>,extract,
+/// `-SnapshotPages organize,select:1-3,rotate,move:1,duplicate,delete,blank[:<paper>|:sheet],split,insert:<path>,extract,
 /// copyPaste,sheet:<name>,watermark,numbers,protect:<password>,unprotect,reduce,info:<title>,undo,redo,saved`
 /// (steps run a quarter of a second apart),
+/// `-SnapshotEdit on,select:<text>,open:<text>,type:<text>,commit,swap:<old>:<new>,move:<dx>:<dy>,nudge:<dx>:<dy>,
+/// delete,size:<pt>,font:<name>,color,newtext:<x>:<y>:<text>,picture:<path>,image,resize:<dx>:<dy>,turn:<degrees>[:shift|hold],
+/// pointer:<handle number>[:cmd],pick:<picture number>,restack:<toFront|forward|backward|toBack>,align:<left|center|…>,
+/// stretch:<left|right>:<dx>,editorSide:<left|right>:<dx>,flip:<h|v>,opacity:<0…1>,duplicate,cut,copy,link,background,mask[:<x>:<y>:<w>:<h>[:hold]],unmask,menu,paste:<text>,
+/// find:<text>:<replacement>,next,replace,replaceAll,mark:<pattern>,redact:<x1>:<y1>:<x2>:<y2>,preview,apply,ocr,
+/// undo,undoOne,redo,saved:<text>` (steps run a third of a second apart),
 /// `-SnapshotForms fill,tab,editor:<field>,date,build,select:<field>,move,delete,detect,done,reset,flatten,undo,saved`.
 enum DebugSnapshot {
     static func scheduleIfRequested() {
@@ -67,8 +73,10 @@ enum DebugSnapshot {
             let shown = viewer.document?.page(at: 0)?.annotations.count ?? -1
             print("MARKUP \(label): \(kinds.count) annotations \(kinds), \(shown) on screen, undo=\(document.undoManager?.canUndo ?? false)")
             for annotation in ((try? document.editor?.annotations(onPageAt: 0)) ?? []) where annotation.kind == .stamp {
-                let shownBounds = annotation.objectID.flatMap { document.displayedAnnotation($0, onPage: 0) }?.bounds
-                print("MARKUP   stamp rect \(annotation.rect) shown at \(String(describing: shownBounds)) content=\(annotation.stamp != nil)")
+                let displayed = annotation.objectID.flatMap { document.displayedAnnotation($0, onPage: 0) }
+                let shownBounds = displayed?.bounds
+                // Read by PDFKit from the file's own bytes, which is sharp, or drawn by the app, which is not.
+                print("MARKUP   stamp rect \(annotation.rect) shown at \(String(describing: shownBounds)) content=\(annotation.stamp != nil) drawn by \(displayed.map { String(describing: type(of: $0)) } ?? "nothing")")
             }
         }
         switch step {
@@ -170,6 +178,32 @@ enum DebugSnapshot {
                 viewer.beginTextEditing(box, pageIndex: 0, isNew: false)
                 viewer.pdfView.debugType("Editing this text in place")
             }
+        case "drawn":
+            // A signature as the mouse draws one: a few dozen points along loops, not a smooth curve.
+            viewer.isMarkupVisible = true
+            var stroke: [CGPoint] = []
+            for step in 0...46 {
+                let t = Double(step) / 46
+                stroke.append(CGPoint(x: 20 + 300 * t + 22 * sin(t * 26), y: 80 + 46 * sin(t * 19) * (1 - 0.5 * t)))
+            }
+            if let signature = SignatureMaker.signature(fromStrokes: [stroke, [CGPoint(x: 40, y: 40), CGPoint(x: 150, y: 52), CGPoint(x: 330, y: 44)]]) { viewer.place(signature) }
+            viewer.selection = nil
+            report("after a drawn signature")
+            if UserDefaults.standard.bool(forKey: "SnapshotLayers") {
+                // How PDFKit has laid its drawing out in layers, a moment later when it has settled.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    func walk(_ layer: CALayer, _ depth: Int) {
+                        guard depth < 14 else { return }
+                        let contents = layer.contents.map { value -> String in
+                            if CFGetTypeID(value as CFTypeRef) == CGImage.typeID { let image = value as! CGImage; return "image \(image.width)x\(image.height)" }
+                            return String(describing: type(of: value))
+                        } ?? "none"
+                        print("LAYER \(String(repeating: " ", count: depth))\(type(of: layer)) delegate=\(layer.delegate.map { String(describing: type(of: $0)) } ?? "-") bounds=\(layer.bounds.size) scale=\(layer.contentsScale) hidden=\(layer.isHidden) opacity=\(layer.opacity) contents=\(contents) sub=\(layer.sublayers?.count ?? 0)")
+                        for sublayer in layer.sublayers ?? [] { walk(sublayer, depth + 1) }
+                    }
+                    if let layer = viewer.pdfView.layer { walk(layer, 0) }
+                }
+            }
         case "signatures":
             viewer.isMarkupVisible = true
             viewer.isSignaturePickerPresented = true
@@ -231,7 +265,14 @@ enum DebugSnapshot {
         case "rotate": viewer.rotatePages(viewer.targetPageIndexes, by: 90)
         case "duplicate": viewer.duplicatePages(viewer.targetPageIndexes)
         case "delete": viewer.deletePages(viewer.targetPageIndexes)
-        case "blank": viewer.insertBlankPage()
+        case "blank":
+            // `blank:a3` and the like pick a paper, `blank:sheet` shows the sheet for any size.
+            if argument == "sheet" {
+                viewer.chooseBlankPageSize()
+            } else {
+                viewer.insertBlankPage(size: Paper(rawValue: argument)?.size)
+            }
+            print("PAGES blank page menu: \(viewer.documentPageSizes().map(\.title)) then \(Paper.ordered.map(\.title))")
         case "split": viewer.splitPagesInHalf(viewer.targetPageIndexes, direction: .vertical)
         case "move": viewer.movePages(viewer.targetPageIndexes, to: (Int(argument) ?? 1) - 1)
         case "insert": viewer.insertFiles([URL(fileURLWithPath: argument)], at: viewer.insertionIndex)
@@ -295,6 +336,14 @@ enum DebugSnapshot {
         case "images":
             ToolInbox.shared.imageURLs = argument.split(separator: "|").map { URL(fileURLWithPath: String($0)) }
             openWindow?(id: ImagesWindow.windowID)
+        case "write":
+            // What saving would write, to a file.
+            do {
+                try document.currentData.write(to: URL(fileURLWithPath: argument))
+                print("PAGES wrote \(document.currentData.count) bytes")
+            } catch {
+                print("PAGES write failed: \(error)")
+            }
         case "saved":
             // What saving would write, as PDFKit and the engine read it.
             let saved = document.currentData
@@ -531,6 +580,314 @@ enum DebugSnapshot {
         report("after \(step)")
     }
 
+    private static var didRunEdit = false
+
+    /// Where flows put their results in automated runs, in place of asking.
+    static var flowOutputFolder: URL? {
+        UserDefaults.standard.string(forKey: "SnapshotFlowFolder").map { URL(fileURLWithPath: $0, isDirectory: true) }
+    }
+
+    /// Changes text and pictures the way the mouse and keyboard would, and reports what the pages hold.
+    private static func runEdit(_ step: String, _ viewer: ViewerModel) {
+        guard let document = viewer.sheafDocument else { return }
+        let parts = step.split(separator: ":").map(String.init)
+        func argument(_ index: Int) -> String { parts.count > index ? parts[index] : "" }
+        func number(_ index: Int) -> Double { Double(argument(index)) ?? 0 }
+        let pageIndex = viewer.currentPageIndex
+        func report(_ label: String) {
+            guard let content = viewer.content(ofPage: pageIndex) else { return print("EDIT \(label): page cannot be read") }
+            let blocks = content.blocks.prefix(8).map { "\($0.text.replacingOccurrences(of: "\n", with: "⏎").prefix(60))@\(Int($0.frame.x)),\(Int($0.frame.y))" + ($0.isEditable ? "" : "(locked)") }
+            let images = content.images.map { image in
+                "\(Int(image.placement.width.rounded()))x\(Int(image.placement.height.rounded()))@\(Int(image.frame.x.rounded())),\(Int(image.frame.y.rounded())) turned \((image.placement.rotation * 10).rounded() / 10)"
+                    + (image.placement.isMirrored ? " mirrored" : "") + (image.opacity < 1 ? " opacity \(image.opacity)" : "")
+                    + (image.shownPart.map { " mask \($0.x),\($0.y),\($0.width),\($0.height)" } ?? "") + (image.isEditable ? "" : "(locked)")
+            }
+            let shown = viewer.document?.page(at: pageIndex)?.string?.replacingOccurrences(of: "\n", with: "⏎").prefix(120) ?? ""
+            print("EDIT \(label): \(content.blocks.count) blocks \(blocks), images \(images), marks \(viewer.redactionMarkCount), matches \(viewer.textMatches.count), selection \(String(describing: viewer.contentSelection)), moves \(viewer.stackingMoves.map(\.rawValue).sorted()), undo=\(document.undoManager?.canUndo ?? false), PDFKit shows “\(shown)”")
+        }
+        func block(containing text: String) -> TextBlock? {
+            viewer.content(ofPage: pageIndex)?.blocks.first { $0.text.contains(text) }
+        }
+        /// A point on the page as displayed, as the mouse would report it.
+        func pagePoint(_ x: Double, _ y: Double) -> PDFPoint {
+            viewer.content(ofPage: pageIndex)?.geometry.pagePoint(PDFPoint(x: x, y: y)) ?? PDFPoint(x: x, y: y)
+        }
+        func click(_ x: Double, _ y: Double, count: Int = 1) {
+            _ = viewer.contentMouseDown(at: pagePoint(x, y), pageIndex: pageIndex, clickCount: count)
+            viewer.contentMouseUp()
+            viewer.mouseUp()
+        }
+        func dragMouse(_ from: (Double, Double), _ to: (Double, Double), release: Bool = true, modifiers: NSEvent.ModifierFlags = []) {
+            _ = viewer.contentMouseDown(at: pagePoint(from.0, from.1), pageIndex: pageIndex, clickCount: 1, modifiers: modifiers)
+            let middle = pagePoint((from.0 + to.0) / 2, (from.1 + to.1) / 2), end = pagePoint(to.0, to.1)
+            for point in [middle, end] {
+                if viewer.contentDrag != nil || viewer.maskEdit != nil { viewer.contentMouseDragged(to: point, modifiers: modifiers) } else { viewer.mouseDragged(to: point) }
+            }
+            guard release else { return }
+            viewer.contentMouseUp()
+            viewer.mouseUp()
+        }
+        switch parts[0] {
+        case "on": viewer.isContentEditing = true
+        case "off": viewer.isContentEditing = false
+        case "inspector": viewer.isInspectorVisible = true
+        case "rotate": viewer.rotatePages([pageIndex], by: 90)
+        case "tool": viewer.editTool = EditTool(rawValue: argument(1)) ?? .select
+        case "select":
+            guard let found = block(containing: argument(1)) else { return print("EDIT no block with \(argument(1))") }
+            click(found.frame.x + 2, found.frame.y + found.frame.height / 2)
+        case "open":
+            // A double click on the block, which puts the cursor in it.
+            guard let found = block(containing: argument(1)) else { return print("EDIT no block with \(argument(1))") }
+            click(found.frame.x + 2, found.frame.y + found.frame.height / 2, count: 2)
+            print("EDIT open: editable=\(found.isEditable) editing=\(viewer.pdfView.isEditingContent) selection=\(String(describing: viewer.contentSelection)) block=\(found.id) frame=\(found.frame)")
+        case "zoom":
+            switch argument(1) {
+            case "page": viewer.zoomToFitPage()
+            case "width": viewer.zoomToFit()
+            case "in": viewer.zoomIn()
+            default: viewer.setZoom(percent: Int(number(1)))
+            }
+            let checked = ViewerModel.zoomSteps.filter(viewer.isZoomed)
+            print("EDIT zoom \(argument(1)): \(viewer.zoomPercent)% fitWidth=\(viewer.isFitToWindow) fitPage=\(viewer.isFitPage) checked=\(checked) view=\(Int(viewer.pdfView.bounds.width))x\(Int(viewer.pdfView.bounds.height))")
+        case "titlebar":
+            // Which view a click in the toolbar's empty space lands on, row by row from the
+            // top of the window, and whether a double click there zooms the window.
+            guard let window = viewer.pdfView.window, let frameView = window.contentView?.superview else { return }
+            let x = number(1) > 0 ? number(1) : 420
+            func dump(_ view: NSView, _ depth: Int) {
+                guard depth < 7 else { return }
+                print("EDIT toolbar \(String(repeating: " ", count: depth))\(String(describing: type(of: view)).prefix(60)) \(Int(view.frame.minX)),\(Int(view.frame.minY)) \(Int(view.frame.width))x\(Int(view.frame.height))")
+                for subview in view.subviews { dump(subview, depth + 1) }
+            }
+            if let title = frameView.hitTest(CGPoint(x: x, y: window.frame.height - 15)) {
+                var top: NSView = title
+                while let parent = top.superview, !String(describing: type(of: top)).hasPrefix("NSToolbarTitleView") { top = parent }
+                dump(top, 0)
+            }
+            // A double click in the title's row, put in the queue as a real one would be.
+            let fromTop = number(2) > 0 ? number(2) : 15
+            let point = CGPoint(x: x, y: window.frame.height - fromTop)
+            let hit = frameView.hitTest(point).map { String(describing: type(of: $0)) } ?? "nothing"
+            let before = window.frame
+            for (type, count) in [(NSEvent.EventType.leftMouseDown, 1), (.leftMouseUp, 1), (.leftMouseDown, 2), (.leftMouseUp, 2)] {
+                if let event = NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: count, pressure: 1) {
+                    NSApp.postEvent(event, atStart: false)
+                }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                print("EDIT titlebar \(Int(fromTop)) pt from top on \(hit): frame \(before.size) to \(window.frame.size), zoomed=\(window.frame != before)")
+                if window.frame != before { window.setFrame(before, display: true) }
+            }
+        case "views":
+            for view in viewer.pdfView.subviews {
+                print("EDIT view \(type(of: view)) frame=\(view.frame) hidden=\(view.isHidden) alpha=\(view.alphaValue) text=\((view as? NSTextView)?.string.prefix(20) ?? "")")
+            }
+            print("EDIT responder \(String(describing: viewer.pdfView.window?.firstResponder.map { type(of: $0) })) editing=\(viewer.pdfView.isEditingContent)")
+        case "type":
+            viewer.pdfView.debugType(argument(1).replacingOccurrences(of: "\\n", with: "\n"))
+        case "commit": viewer.pdfView.endContentEditing(commit: true)
+        case "swap":
+            // Changes some words of a block through the editor, keeping the rest as typed.
+            guard let found = block(containing: argument(1)) else { return print("EDIT no block with \(argument(1))") }
+            click(found.frame.x + 2, found.frame.y + found.frame.height / 2, count: 2)
+            viewer.pdfView.debugType(found.flowingText.replacingOccurrences(of: argument(1), with: argument(2)))
+            viewer.pdfView.endContentEditing(commit: true)
+        case "move":
+            guard let frame = viewer.selectedBlock?.frame ?? viewer.selectedImage?.frame else { return print("EDIT nothing selected") }
+            let from = (frame.x + frame.width / 2, frame.y + frame.height / 2)
+            dragMouse(from, (from.0 + number(1), from.1 + number(2)), release: argument(3) != "hold")
+        case "resize":
+            // Pulls the bottom right handle out along the picture's own sides.
+            guard let placement = viewer.selectedImage?.placement else { return print("EDIT no picture selected") }
+            let from = placement.point(atFractionX: 1, y: 0)
+            let to = placement.point(atFractionX: 1 + number(1) / placement.width, y: -number(2) / placement.height)
+            dragMouse((from.x, from.y), (to.x, to.y))
+        case "turn":
+            // Command and a drag of the top right handle, around the picture's center.
+            guard let placement = viewer.selectedImage?.placement else { return print("EDIT no picture selected") }
+            let from = placement.point(atFractionX: 1, y: 1)
+            var turned = placement
+            turned.rotation += number(1)
+            let to = turned.point(atFractionX: 1, y: 1)
+            dragMouse((from.x, from.y), (to.x, to.y), release: argument(2) != "hold", modifiers: argument(2) == "shift" ? [.command, .shift] : .command)
+        case "pick":
+            // Selects the picture with a number, as they are drawn.
+            guard let image = viewer.content(ofPage: pageIndex)?.images.first(where: { $0.id == Int(number(1)) }) else { return print("EDIT no such picture") }
+            viewer.contentSelection = .image(pageIndex: pageIndex, id: image.id)
+        case "restack": if let move = StackingMove(rawValue: argument(1)) { viewer.restackSelection(move) }
+        case "align": if let alignment = PageAlignment(rawValue: argument(1)) { viewer.alignSelection(alignment) }
+        case "flip": viewer.flipSelectedPicture(horizontally: argument(1) != "v")
+        case "opacity": viewer.setSelectedPictureOpacity(number(1))
+        case "duplicate": viewer.duplicateContentSelection()
+        case "cut": viewer.cutContentSelection()
+        case "copy":
+            viewer.copyContentSelection()
+            let image = NSImage(pasteboard: .general)
+            print("EDIT pasteboard picture \(image.map { "\(Int($0.size.width))x\(Int($0.size.height))" } ?? "none"), text \(NSPasteboard.general.string(forType: .string)?.prefix(40) ?? "none")")
+        case "link": viewer.addLinkToContentSelection()
+        case "background": viewer.removeBackgroundOfSelectedPicture()
+        case "mask":
+            // Opens the mask and drags its handles so the given part shows, as fractions of the picture.
+            viewer.beginMaskEditing()
+            guard let edit = viewer.maskEdit else { return print("EDIT no mask to change") }
+            print("EDIT mask open: picture \(edit.picture.map { "\($0.width)x\($0.height)" } ?? "none")")
+            guard parts.count >= 5 else { return }
+            func drag(_ from: (Double, Double), _ to: (Double, Double)) {
+                let start = edit.whole.point(atFractionX: from.0, y: from.1), end = edit.whole.point(atFractionX: to.0, y: to.1)
+                dragMouse((start.x, start.y), (end.x, end.y))
+            }
+            let part = viewer.maskEdit?.part ?? edit.part
+            drag((part.x, part.y), (number(1), number(2)))
+            drag((part.x + part.width, part.y + part.height), (number(1) + number(3), number(2) + number(4)))
+            if argument(5) != "hold" { viewer.endMaskEditing(commit: true) }
+        case "unmask": viewer.resetMask()
+        case "menu":
+            // What a right click on the selection offers.
+            guard let frame = viewer.selectedBlock?.frame ?? viewer.selectedImage?.frame, let window = viewer.pdfView.window,
+                  let at = viewer.viewPoint(PDFPoint(x: frame.x + frame.width / 2, y: frame.y + frame.height / 2), pageIndex: pageIndex),
+                  let event = NSEvent.mouseEvent(with: .rightMouseDown, location: viewer.pdfView.convert(at, to: nil), modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1),
+                  let menu = viewer.pdfView.menu(for: event)
+            else { return print("EDIT no menu") }
+            func titles(_ menu: NSMenu) -> [String] {
+                menu.items.map { item in
+                    if item.isSeparatorItem { return "|" }
+                    let enabled = item.submenu != nil || (item.target as? NSMenuItemValidation)?.validateMenuItem(item) ?? true
+                    return item.title + (enabled ? "" : "(off)") + (item.submenu.map { "[" + titles($0).joined(separator: ", ") + "]" } ?? "")
+                }
+            }
+            print("EDIT menu: \(titles(menu).joined(separator: ", "))")
+        case "pointer":
+            // Moves the pointer onto a handle of the selected thing and reports what it turns into.
+            guard let geometry = viewer.selectionGeometry ?? viewer.contentSelectionGeometry, let page = viewer.document?.page(at: geometry.pageIndex),
+                  geometry.handles.indices.contains(Int(number(1))), let window = viewer.pdfView.window
+            else { return print("EDIT no handle") }
+            let handle = geometry.handles[Int(number(1))]
+            let place = viewer.pdfView.convert(viewer.pdfView.convert(handle.point.cgPoint, from: page), to: nil)
+            let modifiers: NSEvent.ModifierFlags = argument(2) == "cmd" ? .command : []
+            if let event = NSEvent.mouseEvent(with: .mouseMoved, location: place, modifierFlags: modifiers, timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 0, pressure: 0) {
+                viewer.pdfView.mouseMoved(with: event)
+            }
+            let expected = viewer.pdfView.handleCursor(at: viewer.pdfView.convert(place, from: nil), modifiers: modifiers)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                let cursor = NSCursor.current
+                print("EDIT pointer \(handle.handle): size \(cursor.image.size) hot \(cursor.hotSpot) arrow=\(cursor == NSCursor.arrow) expected=\(expected.map { $0 == cursor } ?? false) key=\(window.isKeyWindow)")
+            }
+        case "stretch":
+            // Drags a side handle of the selected text: `stretch:right:-120`.
+            guard let frame = viewer.selectedBlock?.frame else { return print("EDIT no text selected") }
+            let x = argument(1) == "left" ? frame.x : frame.x + frame.width, y = frame.y + frame.height / 2
+            dragMouse((x, y), (x + number(2), y))
+        case "editorSide":
+            // Drags a side of the editor that is open: `editorSide:right:80` in points of the view.
+            viewer.pdfView.debugDragEditorSide(left: argument(1) == "left", by: number(2))
+        case "nudge": viewer.nudgeContentSelection(dx: number(1), dy: number(2))
+        case "delete": viewer.deleteContentSelection()
+        case "size": viewer.restyleSelectedBlock("Change Text Size", TextRestyle(fontSize: number(1)))
+        case "font": viewer.restyleSelectedBlock("Change Font", TextRestyle(fontName: argument(1)))
+        case "color": viewer.restyleSelectedBlock("Change Color", TextRestyle(color: .red))
+        case "newtext":
+            viewer.editTool = .text
+            click(number(1), number(2))
+            viewer.pdfView.debugType(argument(3).replacingOccurrences(of: "\\n", with: "\n"))
+            if argument(4) != "hold" { viewer.pdfView.endContentEditing(commit: true) }
+        case "picture":
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: step.dropFirst("picture:".count).description)) { viewer.addPicture(data) } else { print("EDIT cannot read picture") }
+        case "image":
+            guard let image = viewer.content(ofPage: pageIndex)?.images.first else { return print("EDIT no picture on the page") }
+            click(image.frame.x + image.frame.width / 2, image.frame.y + image.frame.height / 2)
+        case "paste":
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(argument(1), forType: .string)
+            viewer.pasteContent()
+        case "find":
+            viewer.showReplace()
+            viewer.replaceQuery = argument(1)
+            viewer.replacement = argument(2)
+        case "next": viewer.selectMatch(offset: 1)
+        case "replace": viewer.replaceCurrentMatch()
+        case "replaceAll": viewer.replaceAllMatches()
+        case "closeFind": viewer.isReplaceVisible = false
+        case "mark":
+            if let pattern = RedactionPattern(rawValue: argument(1)) { viewer.markForRedaction(pattern) } else { viewer.markMatchesForRedaction() }
+        case "redact":
+            viewer.editTool = .redact
+            dragMouse((number(1), number(2)), (number(3), number(4)))
+            viewer.editTool = .select
+        case "preview": viewer.previewsRedactions = true
+        case "confirm": viewer.isApplyRedactionsConfirmationPresented = true
+        case "apply":
+            viewer.applyRedactions()
+            print("EDIT apply: \(viewer.editMessage ?? "")")
+            viewer.editMessage = nil
+        case "ocr":
+            Task {
+                let pages = viewer.pagesWithoutText(among: Array(0..<viewer.pageCount))
+                let count = await viewer.recognizeText(onPages: pages) { _ in true }
+                print("EDIT ocr: \(pages.count) pages without text, recognized on \(count), PDFKit reads “\(viewer.document?.page(at: 0)?.string?.replacingOccurrences(of: "\n", with: "⏎").prefix(160) ?? "")”")
+            }
+        case "sheet": viewer.activeSheet = ToolSheet(rawValue: argument(1))
+        case "compare":
+            // This document against the file at a path.
+            let url = URL(fileURLWithPath: String(step.dropFirst("compare:".count)))
+            guard let data = try? Data(contentsOf: url) else { return print("EDIT cannot read \(url.path)") }
+            ToolInbox.shared.compare(
+                original: CompareSource(data: document.currentData, name: "Original.pdf", password: document.password),
+                revised: CompareSource(data: data, name: url.lastPathComponent, password: nil)
+            )
+            // A window nobody can see is not drawn, and so cannot be captured.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                for window in NSApp.windows where window.title == "Compare Documents" {
+                    window.setFrame(NSRect(x: 40, y: 60, width: 1100, height: 700), display: true)
+                    window.orderFrontRegardless()
+                }
+            }
+        case "flow":
+            // One of the saved flows, by position, on this document.
+            let flows = FlowStore.shared.flows
+            guard flows.indices.contains(Int(number(1))) else { return print("EDIT no such flow") }
+            print("EDIT flow: running “\(flows[Int(number(1))].name)” of \(flows.map(\.name))")
+            viewer.run(flows[Int(number(1))])
+        case "flowBatch":
+            // A saved flow on files, with results in the folder named by -SnapshotFlowFolder.
+            let flows = FlowStore.shared.flows
+            guard flows.indices.contains(Int(number(1))), let folder = flowOutputFolder else { return print("EDIT no such flow, or no folder") }
+            let urls = step.split(separator: ":").dropFirst(2).joined(separator: ":").split(separator: "|").map { URL(fileURLWithPath: String($0)) }
+            let run = FlowRun()
+            run.start(flows[Int(number(1))], on: urls)
+            Task {
+                while run.isRunning { try? await Task.sleep(for: .milliseconds(100)) }
+                let made = (try? FileManager.default.contentsOfDirectory(atPath: folder.path))?.sorted() ?? []
+                print("EDIT flowBatch: \(run.phase), folder holds \(made)")
+            }
+        case "compared":
+            guard let model = CompareModel.current else { return print("EDIT no compare window") }
+            let changes = model.changes.map { "\($0.kind.rawValue) p\(($0.pageA ?? -1) + 1)/p\(($0.pageB ?? -1) + 1) “\($0.textA)”→“\($0.textB)” frames \($0.framesA.count)/\($0.framesB.count)" }
+            let marks = (0..<(model.revisedView.document?.pageCount ?? 0)).map { model.revisedView.document?.page(at: $0)?.annotations.count ?? 0 }
+            print("EDIT compared: \(changes), selection \(String(describing: model.selection)), marks on revised pages \(marks), progress \(String(describing: model.progress)), error \(model.errorMessage ?? "none")")
+            model.step(1)
+            print("EDIT compared: after next, selection \(String(describing: model.selection)), original at page \(model.originalView.currentPage.flatMap { model.originalView.document?.index(for: $0) } ?? -1)")
+        case "undo":
+            var steps = 0
+            while document.undoManager?.canUndo == true, steps < 200 {
+                document.undoManager?.undo()
+                steps += 1
+            }
+        case "undoOne": document.undoManager?.undo()
+        case "redo": document.undoManager?.redo()
+        case "saved":
+            let saved = document.currentData
+            let reader = PDFDocument(data: saved)
+            let text = reader?.page(at: pageIndex)?.string?.replacingOccurrences(of: "\n", with: "⏎") ?? ""
+            let needle = argument(1)
+            let raw = needle.isEmpty ? false : saved.range(of: Data(needle.utf8)) != nil
+            print("EDIT saved: \(saved.count) bytes, keeps original=\(saved.prefix(document.contents.data.count) == document.contents.data), PDFKit reads “\(text.prefix(200))”" + (needle.isEmpty ? "" : ", “\(needle)” in text=\(text.contains(needle)), in bytes=\(raw)"))
+        case "report": break
+        default: print("EDIT unknown step \(step)")
+        }
+        report("after \(step)")
+    }
+
     private static var didOpenSettings = false
     private static var didRunAction = false
 
@@ -585,6 +942,16 @@ enum DebugSnapshot {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25 * Double(index)) { runForms(step, viewer) }
                 }
             }
+            if let edit = defaults.string(forKey: "SnapshotEdit"), !didRunEdit {
+                didRunEdit = true
+                for (index, step) in edit.split(separator: ",").map(String.init).enumerated() {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3 * Double(index)) {
+                        let start = Date()
+                        runEdit(step, viewer)
+                        print("EDIT took \(Int(Date().timeIntervalSince(start) * 1000)) ms: \(step.prefix(30))")
+                    }
+                }
+            }
             if let pages, !didRunPages {
                 didRunPages = true
                 // One step per turn of the run loop, since page changes show a moment later.
@@ -597,6 +964,29 @@ enum DebugSnapshot {
             case "print": viewer.printDocument()
             case "exportPanel": viewer.export()
             case "duplicate": NSDocumentController.shared.documents.first?.duplicate(nil)
+            case "saveAs":
+                // The real Save As panel, to see the options Sheaf adds to it.
+                NSDocumentController.shared.documents.first?.saveAs(nil)
+            case let name? where name.hasPrefix("saveWith:"):
+                // Saves under a new name the way the panel would, with options: `archival`, `screen`, `jpeg`, `password`.
+                guard let document = NSDocumentController.shared.documents.first else { break }
+                let chosen = Set(name.dropFirst("saveWith:".count).split(separator: "+").map(String.init))
+                let model = SaveOptionsModel(showsFormat: false)
+                model.makesArchival = chosen.contains("archival")
+                model.optimizesPictures = chosen.contains("screen")
+                model.usesJPEG = chosen.contains("jpeg")
+                if chosen.contains("password") { (model.password, model.verification) = ("secret", "secret") }
+                SavePanelOptions.debugAttach(model, to: document)
+                let url = FileManager.default.temporaryDirectory.appendingPathComponent("saved-with-options.pdf")
+                let before = viewer.sheafDocument?.currentData.count ?? 0
+                document.save(to: url, ofType: document.fileType ?? "com.adobe.pdf", for: .saveAsOperation) { error in
+                    MainActor.assumeIsolated {
+                        let written = (try? Data(contentsOf: url)) ?? Data()
+                        let read = PDFDocument(data: written)
+                        let text = String(decoding: written.prefix(200_000), as: UTF8.self) + String(decoding: written.suffix(20_000), as: UTF8.self)
+                        print("SAVEAS \(name): error=\(String(describing: error)) bytes \(before) to \(written.count), PDFKit pages=\(read?.pageCount ?? -1) locked=\(read?.isLocked ?? false) encrypted=\(read?.isEncrypted ?? false), pdfa=\(text.contains("pdfaid")), window encrypted=\(viewer.sheafDocument?.editor?.base.isEncrypted ?? false) password=\(viewer.sheafDocument?.password != nil) undo=\(viewer.sheafDocument?.undoManager?.canUndo ?? false) fileURL=\(document.fileURL?.lastPathComponent ?? "none")")
+                    }
+                }
             case "revert":
                 if let document = NSDocumentController.shared.documents.first, let url = document.fileURL, let type = document.fileType {
                     do {
@@ -625,6 +1015,9 @@ enum DebugSnapshot {
         for window in NSApp.windows {
             print("WINDOW \(type(of: window)) visible=\(window.isVisible) title=\(window.title) modal=\(NSApp.modalWindow === window) tabs=\(window.tabbedWindows?.count ?? 1) sheet=\(window.attachedSheet != nil)")
         }
+        for document in NSDocumentController.shared.documents {
+            print("DOCUMENT \(document.displayName ?? "?") edited=\(document.isDocumentEdited) unautosaved=\(document.hasUnautosavedChanges) undo=\(document.undoManager?.canUndo ?? false) grouping=\(document.undoManager?.groupingLevel ?? -1)")
+        }
         if UserDefaults.standard.bool(forKey: "SnapshotFrames") {
             for window in NSApp.windows where window.isVisible && window.title.hasSuffix(".pdf") {
                 print("FRAME window \(window.frame.size) content \(window.contentView?.frame ?? .zero) min \(window.contentMinSize) layoutRect \(window.contentLayoutRect)")
@@ -639,7 +1032,18 @@ enum DebugSnapshot {
             }
         }
         for window in NSApp.windows where window.isVisible {
-            guard let png = windowServerCapture(of: window) ?? viewCapture(of: window) else { continue }
+            if UserDefaults.standard.bool(forKey: "SnapshotTree") {
+                func walk(_ view: NSView, _ depth: Int) {
+                    guard depth < 9 else { return }
+                    print("TREE \(String(repeating: " ", count: depth))\(String(describing: type(of: view)).prefix(70)) \(view.frame) hidden=\(view.isHidden)")
+                    for subview in view.subviews { walk(subview, depth + 1) }
+                }
+                print("TREE window \(window.title) frame \(window.frame) occlusion visible=\(window.occlusionState.contains(.visible))")
+                if let content = window.contentView { walk(content, 0) }
+            }
+            // The window server only has a picture of windows that are really on screen.
+            let onScreen = window.occlusionState.contains(.visible)
+            guard let png = (onScreen ? windowServerCapture(of: window) : nil) ?? viewCapture(of: window) else { continue }
             print("SNAPSHOT \(window.title)\t\(png.base64EncodedString())")
         }
         if UserDefaults.standard.bool(forKey: "SnapshotMenus") {

@@ -399,6 +399,149 @@ struct RotatePDFPagesIntent: AppIntent {
     }
 }
 
+struct RecognizeTextIntent: AppIntent {
+    static let title: LocalizedStringResource = "Recognize Text in PDF"
+    static let description = IntentDescription("Reads the text in scanned pages and lays it over them invisibly, so the PDF can be searched and copied from.", categoryName: "Documents")
+
+    @Parameter(title: "PDF", supportedContentTypes: [.pdf])
+    var file: IntentFile
+
+    @Parameter(title: "Password")
+    var password: String?
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Recognize the text in \(\.$file)") {
+            \.$password
+        }
+    }
+
+    func perform() async throws -> some IntentResult & ReturnsValue<IntentFile> {
+        let input = source(file, password: password)
+        let data = try await background { try Toolbox.recognizeText(input).data }
+        return .result(value: pdf(data, named: input.name))
+    }
+}
+
+struct PDFToWordIntent: AppIntent {
+    static let title: LocalizedStringResource = "Make Word Document from PDF"
+    static let description = IntentDescription("Carries a PDF's text over into a Word file, with its fonts, sizes, colors and pictures.", categoryName: "Documents")
+
+    @Parameter(title: "PDF", supportedContentTypes: [.pdf])
+    var file: IntentFile
+
+    @Parameter(title: "Password")
+    var password: String?
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Make a Word document from \(\.$file)") {
+            \.$password
+        }
+    }
+
+    func perform() async throws -> some IntentResult & ReturnsValue<IntentFile> {
+        let input = source(file, password: password)
+        let data = try await background { try Toolbox.word(input) }
+        return .result(value: IntentFile(data: data, filename: input.name + ".docx", type: UTType(filenameExtension: "docx")))
+    }
+}
+
+struct PDFToExcelIntent: AppIntent {
+    static let title: LocalizedStringResource = "Make Excel Workbook from PDF"
+    static let description = IntentDescription("Puts each page's text into a sheet, in rows and columns as it is on the page.", categoryName: "Documents")
+
+    @Parameter(title: "PDF", supportedContentTypes: [.pdf])
+    var file: IntentFile
+
+    @Parameter(title: "Password")
+    var password: String?
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Make an Excel workbook from \(\.$file)") {
+            \.$password
+        }
+    }
+
+    func perform() async throws -> some IntentResult & ReturnsValue<IntentFile> {
+        let input = source(file, password: password)
+        let data = try await background { try Toolbox.excel(input) }
+        return .result(value: IntentFile(data: data, filename: input.name + ".xlsx", type: UTType(filenameExtension: "xlsx")))
+    }
+}
+
+struct ConvertToPDFAIntent: AppIntent {
+    static let title: LocalizedStringResource = "Convert PDF to PDF/A"
+    static let description = IntentDescription("Makes a PDF fit for long-term archiving: fonts inside the file, a color profile, no scripts or password.", categoryName: "Documents")
+
+    @Parameter(title: "PDF", supportedContentTypes: [.pdf])
+    var file: IntentFile
+
+    @Parameter(title: "Password")
+    var password: String?
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Convert \(\.$file) to PDF/A") {
+            \.$password
+        }
+    }
+
+    func perform() async throws -> some IntentResult & ReturnsValue<IntentFile> {
+        let input = source(file, password: password)
+        let data = try await background { try Toolbox.archival(input).data }
+        return .result(value: pdf(data, named: input.name))
+    }
+}
+
+/// A saved flow, as Shortcuts sees it.
+nonisolated struct FlowEntity: AppEntity {
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Flow"
+    static let defaultQuery = FlowQuery()
+
+    let id: UUID
+    let name: String
+
+    var displayRepresentation: DisplayRepresentation { DisplayRepresentation(title: "\(name)") }
+}
+
+nonisolated struct FlowQuery: EntityQuery {
+    func entities(for identifiers: [UUID]) async throws -> [FlowEntity] {
+        FlowFile.read().filter { identifiers.contains($0.id) }.map { FlowEntity(id: $0.id, name: $0.name) }
+    }
+
+    func suggestedEntities() async throws -> [FlowEntity] {
+        FlowFile.read().map { FlowEntity(id: $0.id, name: $0.name) }
+    }
+}
+
+struct RunFlowIntent: AppIntent {
+    static let title: LocalizedStringResource = "Run Flow on Files"
+    static let description = IntentDescription("Runs one of the flows saved in Sheaf on PDFs and pictures, and gives back the results.", categoryName: "Documents")
+
+    @Parameter(title: "Flow")
+    var flow: FlowEntity
+
+    @Parameter(title: "Files", supportedContentTypes: [.pdf, .image])
+    var files: [IntentFile]
+
+    @Parameter(title: "Password", description: "Used for any of the PDFs that is protected.")
+    var password: String?
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Run \(\.$flow) on \(\.$files)") {
+            \.$password
+        }
+    }
+
+    func perform() async throws -> some IntentResult & ReturnsValue<[IntentFile]> {
+        let id = flow.id
+        guard let saved = FlowFile.read().first(where: { $0.id == id }) else { throw ToolError.nothingToDo }
+        let sources = files.map { source($0, password: password) }
+        let outputs = try await background { try FlowRunner.run(saved, on: sources) }
+        return .result(value: outputs.map { output in
+            IntentFile(data: output.data, filename: "\(output.name).\(output.fileExtension)", type: UTType(filenameExtension: output.fileExtension))
+        })
+    }
+}
+
 /// The actions Shortcuts and Spotlight offer without any setting up.
 struct SheafShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {

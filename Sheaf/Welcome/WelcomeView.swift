@@ -19,6 +19,7 @@ struct WelcomeView: View {
             identity
                 .frame(width: 300)
                 .frame(maxHeight: .infinity)
+                .windowDragArea()
             Divider()
             VStack(spacing: 0) {
                 header
@@ -114,6 +115,7 @@ struct WelcomeView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
+        .windowDragArea()
     }
 
     private var visibleRecents: [URL] {
@@ -178,6 +180,17 @@ struct WelcomeView: View {
 
     private static var version: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+    }
+}
+
+extension View {
+    /// Lets the window be dragged by this view's empty space and labels. The window has
+    /// no title bar to drag by, and only a thin strip at its very top moves it otherwise.
+    /// Buttons, fields and other controls inside keep working as they do.
+    func windowDragArea() -> some View {
+        contentShape(.rect)
+            .gesture(WindowDragGesture())
+            .allowsWindowActivationEvents(true)
     }
 }
 

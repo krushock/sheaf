@@ -24,7 +24,7 @@ struct OrganizerBar: View {
         let targets = viewer.targetPageIndexes
         return HStack(spacing: 4) {
             Menu {
-                Button("Blank Page") { viewer.insertBlankPage() }
+                BlankPageMenu("Blank Page", viewer: viewer)
                 Button("Pages from File…") { viewer.chooseFilesToInsert() }
                 Button("Pages from Scanner…") { viewer.activeSheet = .scanner }
             } label: {

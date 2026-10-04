@@ -99,6 +99,23 @@ enum ImageRecoder {
         return Output(data: Flate.deflate(samples), isJPEG: false, width: targetWidth, height: targetHeight)
     }
 
+    /// A PNG file from unpacked samples, one byte each, rows from the top.
+    static func png(samples: Data, width: Int, height: Int, components: Int) -> Data? {
+        guard components == 1 || components == 3, width > 0, height > 0, samples.count >= width * height * components,
+              let provider = CGDataProvider(data: samples as CFData),
+              let image = CGImage(
+                  width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 8 * components, bytesPerRow: width * components,
+                  space: components == 1 ? CGColorSpaceCreateDeviceGray() : CGColorSpace(name: CGColorSpace.sRGB)!,
+                  bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue), provider: provider, decode: nil,
+                  shouldInterpolate: true, intent: .defaultIntent
+              )
+        else { return nil }
+        let output = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(output, "public.png" as CFString, 1, nil) else { return nil }
+        CGImageDestinationAddImage(destination, image, nil)
+        return CGImageDestinationFinalize(destination) ? output as Data : nil
+    }
+
     /// Whether a sampling of the pixels finds no more colors than a palette would hold.
     private static func hasFewColors(_ samples: Data, components: Int) -> Bool {
         let pixelCount = samples.count / components

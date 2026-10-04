@@ -23,7 +23,7 @@ struct SidebarMenu: View {
 
     var body: some View {
         Menu {
-            Toggle("Hide Sidebar", isOn: Binding(get: { !viewer.isSidebarVisible }, set: { viewer.isSidebarVisible = !$0 }))
+            Toggle("Hide Sidebar", isOn: Binding(get: { !viewer.isSidebarVisible }, set: { viewer.setSidebarVisible(!$0) }))
             Divider()
             ForEach(SidebarMode.allCases) { mode in
                 Toggle(isOn: Binding(
@@ -43,6 +43,12 @@ struct SidebarMenu: View {
 extension ViewerModel {
     func showSidebar(_ mode: SidebarMode) {
         sidebarMode = mode
-        isSidebarVisible = true
+        setSidebarVisible(true)
+    }
+
+    /// Shows or hides the sidebar, sliding it in or out as the system's own toggle does.
+    func setSidebarVisible(_ isVisible: Bool) {
+        guard isVisible != isSidebarVisible else { return }
+        withAnimation { isSidebarVisible = isVisible }
     }
 }

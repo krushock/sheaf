@@ -93,6 +93,7 @@ nonisolated enum NewDocumentPaper: String, CaseIterable, Identifiable, Sendable 
 /// User defaults keys and typed readers for code outside SwiftUI views.
 nonisolated enum Preferences {
     static let showWelcomeAtLaunch = "general.showWelcomeAtLaunch"
+    static let askedAboutDefaultApp = "general.askedAboutDefaultApp"
     static let newDocumentPaper = "general.newDocumentPaper"
     static let pageLayout = "viewing.pageLayout"
     static let openingZoom = "viewing.openingZoom"
@@ -100,6 +101,12 @@ nonisolated enum Preferences {
     static let welcomeShowsGrid = "welcome.showsGrid"
     static let organizerPageSizeKey = "organizer.pageSize"
     static let highlightsFields = "forms.highlightsFields"
+    static let pictureKeepsProportions = "editing.pictureKeepsProportions"
+
+    /// Whether resizing a picture by a corner, or by typing one side, keeps its shape.
+    static var pictureKeepsProportionsValue: Bool {
+        UserDefaults.standard.object(forKey: pictureKeepsProportions) as? Bool ?? true
+    }
 
     /// The width of a page in the organizer's grid.
     static var organizerPageSize: Double {

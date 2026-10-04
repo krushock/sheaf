@@ -12,6 +12,12 @@ final class ToolInbox {
     var imageURLs: [URL] = []
     /// A tool to show once a document that is being opened has its window.
     var pendingSheets: [URL: ToolSheet] = [:]
+    /// Documents on their way to the Compare window.
+    var pendingComparison: (original: CompareSource?, revised: CompareSource?)? {
+        didSet { if pendingComparison != nil { comparisonRequests += 1 } }
+    }
+
+    private(set) var comparisonRequests = 0
 
     /// Opens windows by name. Set by the first window to appear, since only views can ask.
     @ObservationIgnored var openWindow: OpenWindowAction? {

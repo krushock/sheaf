@@ -53,6 +53,52 @@ extension PDFEditor {
         try update(page) { $0["Annots"] = remaining.isEmpty ? nil : .array(remaining) }
     }
 
+    /// Where an annotation would go among the page's annotations to make a move in their
+    /// stacking order: later ones are drawn over earlier ones. `nil` when the move would
+    /// change nothing.
+    private func destination(_ move: StackingMove, forAnnotation id: ObjectID, among references: [PDFObject]) throws -> (from: Int, to: Int)? {
+        guard let from = references.firstIndex(where: { $0.referenceValue == id }),
+              let mine = try object(id).dictionaryValue.flatMap({ PDFRectangle(try value("Rect", in: $0)) })
+        else { return nil }
+        // Only annotations that lie over or under this one count.
+        var above: [Int] = [], below: [Int] = []
+        for (position, reference) in references.enumerated() where position != from {
+            guard let other = try resolve(reference).dictionaryValue, other["Subtype"]?.nameValue != "Popup",
+                  let rect = PDFRectangle(try value("Rect", in: other)),
+                  min(rect.x + rect.width, mine.x + mine.width) - max(rect.x, mine.x) > 0.01,
+                  min(rect.y + rect.height, mine.y + mine.height) - max(rect.y, mine.y) > 0.01
+            else { continue }
+            if position > from { above.append(position) } else { below.append(position) }
+        }
+        switch move {
+        case .toFront: return above.isEmpty ? nil : (from, references.count - 1)
+        case .forward: return above.first.map { (from, $0) }
+        case .backward: return below.last.map { (from, $0) }
+        case .toBack: return below.first.map { (from, $0) }
+        }
+    }
+
+    /// The moves that would change how an annotation is stacked among the others on its page.
+    public func stackingMoves(forAnnotation id: ObjectID, onPageAt index: Int) throws -> Set<StackingMove> {
+        let references = try annotationReferences(of: try pageID(at: index))
+        return Set(try StackingMove.allCases.filter { try destination($0, forAnnotation: id, among: references) != nil })
+    }
+
+    /// Moves an annotation in front of or behind the other annotations it overlaps.
+    /// Annotations always lie over what the page itself draws.
+    ///
+    /// - Returns: Whether anything changed.
+    @discardableResult
+    public mutating func restack(annotation id: ObjectID, onPageAt index: Int, _ move: StackingMove) throws -> Bool {
+        let page = try pageID(at: index)
+        var references = try annotationReferences(of: page)
+        guard let (from, to) = try destination(move, forAnnotation: id, among: references) else { return false }
+        let moved = references.remove(at: from)
+        references.insert(moved, at: to)
+        try update(page) { $0["Annots"] = .array(references) }
+        return true
+    }
+
     /// The annotations plus what cannot exist without them: their pop-up windows and,
     /// when asked, the replies to them.
     private func dependents(of ids: Set<ObjectID>, among references: [PDFObject], includingReplies: Bool) throws -> Set<ObjectID> {
@@ -323,7 +369,7 @@ extension PDFEditor {
 
         for (reference, model) in zip(references, models) {
             guard let id = reference.referenceValue, ids?.contains(id) ?? true,
-                  ![.link, .other].contains(model.kind) || model.subtype == "FileAttachment" || (includingWidgets && model.subtype == "Widget"),
+                  ![.link, .other, .redact].contains(model.kind) || model.subtype == "FileAttachment" || (includingWidgets && model.subtype == "Widget"),
                   let dictionary = try object(id).dictionaryValue
             else { continue }
             // Hidden annotations are not drawn, so there is nothing to make permanent.

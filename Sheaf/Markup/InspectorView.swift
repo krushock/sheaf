@@ -11,6 +11,12 @@ struct InspectorView: View {
             FormInspector(viewer: viewer, hit: hit)
                 // A different field gets fresh text boxes, not the last one's half-typed text.
                 .id(hit.widget.id)
+        } else if case .block(let pageIndex, _) = viewer.contentSelection, let block = viewer.selectedBlock {
+            TextBlockInspector(viewer: viewer, block: block, pageIndex: pageIndex)
+        } else if case .image(let pageIndex, _) = viewer.contentSelection, let image = viewer.selectedImage {
+            PictureInspector(viewer: viewer, image: image, pageIndex: pageIndex)
+        } else if viewer.isContentEditing, viewer.editTool == .text {
+            NewTextInspector(viewer: viewer)
         } else if let annotation = viewer.selectedAnnotation {
             Form {
                 style(of: annotation)
@@ -27,7 +33,11 @@ struct InspectorView: View {
             ContentUnavailableView(
                 "Nothing Selected",
                 systemImage: "cursorarrow.click",
-                description: Text(viewer.isFormEditing ? "Select a field to change it, or pick a tool above to add one." : "Select an annotation to change how it looks.")
+                description: Text(
+                    viewer.isFormEditing ? "Select a field to change it, or pick a tool above to add one."
+                        : viewer.isContentEditing ? "Select text or a picture to change it. Double-click text to type in it."
+                        : "Select an annotation to change how it looks."
+                )
             )
         }
     }
@@ -36,7 +46,7 @@ struct InspectorView: View {
 
     @ViewBuilder private func style(of annotation: Annotation) -> some View {
         let kind = annotation.kind
-        let hasColor = kind != .link && kind != .other && !(kind == .stamp && annotation.color == nil)
+        let hasColor = kind != .link && kind != .other && kind != .redact && !(kind == .stamp && annotation.color == nil)
         let hasFill = [.square, .circle, .freeText].contains(kind)
         let hasLine = [.square, .circle, .line, .ink].contains(kind)
         let hasOpacity = [.highlight, .underline, .strikeOut, .square, .circle, .line, .ink].contains(kind)

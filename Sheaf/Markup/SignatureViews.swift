@@ -12,13 +12,11 @@ struct SignaturePreview: View {
             switch signature.content {
             case .strokes(let strokes, let lineWidth):
                 Canvas { context, size in
+                    // As on the page: curves through the points, half the pen's width in from the edge.
+                    let width = max(lineWidth * min(size.width, size.height), 1), margin = width / 2
                     for stroke in strokes {
-                        var path = Path()
-                        for (index, point) in stroke.enumerated() {
-                            let place = CGPoint(x: point.x * size.width, y: (1 - point.y) * size.height)
-                            if index == 0 { path.move(to: place) } else { path.addLine(to: place) }
-                        }
-                        context.stroke(path, with: .foreground, style: StrokeStyle(lineWidth: max(lineWidth * min(size.width, size.height), 1), lineCap: .round, lineJoin: .round))
+                        let points = stroke.map { CGPoint(x: margin + $0.x * (size.width - width), y: margin + (1 - $0.y) * (size.height - width)) }
+                        context.stroke(Path(PenStroke.path(through: points)), with: .foreground, style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
                     }
                 }
             case .shapes(let elements):
@@ -242,6 +240,28 @@ struct SignatureCreator: View {
     }
 }
 
+/// The line a pen leaves through the places it was at.
+enum PenStroke {
+    /// A curve through the middle of each stretch between two points, bending at the
+    /// points themselves. This is how the engine draws strokes on the page too.
+    static func path(through points: [CGPoint]) -> CGPath {
+        let path = CGMutablePath()
+        guard let first = points.first else { return path }
+        path.move(to: first)
+        guard points.count > 2 else {
+            // A dot, or a single straight stretch.
+            path.addLine(to: points.last ?? first)
+            return path
+        }
+        for index in 1..<points.count - 1 {
+            let control = points[index], next = points[index + 1]
+            path.addQuadCurve(to: CGPoint(x: (control.x + next.x) / 2, y: (control.y + next.y) / 2), control: control)
+        }
+        path.addLine(to: points[points.count - 1])
+        return path
+    }
+}
+
 /// A surface that records pen strokes drawn with the mouse.
 struct SignaturePad: NSViewRepresentable {
     @Binding var strokes: [[CGPoint]]
@@ -286,17 +306,16 @@ struct SignaturePad: NSViewRepresentable {
         }
 
         override func draw(_ dirtyRect: NSRect) {
-            NSColor.labelColor.setStroke()
+            guard let context = NSGraphicsContext.current?.cgContext else { return }
+            // Drawn the way it will look on the page: as curves, not the straight
+            // stretches between the places the mouse was reported at.
+            context.setStrokeColor(NSColor.labelColor.cgColor)
+            context.setLineWidth(2.5)
+            context.setLineCap(.round)
+            context.setLineJoin(.round)
             for stroke in strokes {
-                let path = NSBezierPath()
-                path.lineWidth = 2.5
-                path.lineCapStyle = .round
-                path.lineJoinStyle = .round
-                for (index, point) in stroke.enumerated() {
-                    if index == 0 { path.move(to: point) } else { path.line(to: point) }
-                }
-                if stroke.count == 1 { path.line(to: stroke[0]) }
-                path.stroke()
+                context.addPath(PenStroke.path(through: stroke))
+                context.strokePath()
             }
         }
     }

@@ -186,19 +186,19 @@ registered as an App Intent → Shortcuts + Finder Quick Actions.
 Fill (PDFKit widgets, tab order, flatten, reset). Build: text, checkbox, radio,
 dropdown, date, signature fields; inspector; auto‑detect fields from drawn boxes.
 
-### Phase 6 — Content editing (3–4 weeks, the core)
+### Phase 6 — Content editing (3–4 weeks, the core) ✅ done 2026‑10‑03
 Text layout model, fonts (time‑boxed subsetter + CoreText matching), EditOverlay with
 Pages behaviors (section 5), image move/resize/replace/paste/delete, find & replace,
 redaction (manual + auto patterns + preview + apply), OCR text layer. Exit criteria:
 edit a word in a typical Word‑exported PDF and an InDesign PDF with no visible
 difference; redacted text absent from extraction; all saves open in Preview and Acrobat.
 
-### Phase 7 — Review, convert, automate (1.5 weeks)
+### Phase 7 — Review, convert, automate (1.5 weeks) ✅ done 2026‑10‑03
 Compare (synced scroll, text diff + visual diff, change list, report export), PDF→Word
 and PDF→Excel via in‑house OOXML writer (marked Beta), PDF/A‑2b export, Flows (saved
 step pipelines, batch runner, exposed as Shortcuts actions and Quick Actions).
 
-### Phase 8 — Polish & ship (1 week)
+### Phase 8 — Polish & ship (1 week) ✅ done 2026‑10‑03, except what needs your accounts
 String Catalogs (en, ru), VoiceOver, keyboard navigation, Help Book, TipKit onboarding,
 performance pass on 500+ page / 200 MB files, signing, notarization, DMG, Sparkle.
 
@@ -403,4 +403,216 @@ Flows also become Shortcuts actions and Finder Quick Actions. Starred → Finder
     list boxes that take several choices, per-button values for radio buttons, tab order
     editing, detection of table grids drawn as separate lines, fields on rotated pages
     being drawn upright.
-
+- 2026‑10‑03, Phase 6 done. 210 engine tests, fuzz clean. New corpus passes at 0 problems: text is read on 558 pages that have any (256 exactly as PDFKit reads them, 213 within 5%, the rest mostly CJK fonts with predefined encodings), a word is typed into 248 files and a line redacted in 167, each checked through PDFKit. How it is built, for later phases:
+  - **Pages are read by the engine's own interpreter** (`SheafKit/Text`):
+    `interpret(pageAt:)` runs a page's drawing instructions, forms included, and gives
+    every glyph with its font, place and the instruction it came from, plus pictures and
+    shapes, all in "display space": the page as shown, turned and cropped, origin at the
+    bottom left. `pageContent(at:)` groups glyphs into lines and blocks. `PageGeometry`
+    converts to and from the page's own coordinates, which is what PDFKit and
+    annotations use.
+  - **Text is changed by taking glyphs out and adding new text on top.** A removed glyph
+    becomes an equal amount of empty space in its own instruction, so nothing else on
+    the page moves. What is added is a new text object at the end of the page. A word
+    nobody touched is put back glyph for glyph. A changed word uses the document's own
+    font when it has every letter, and an installed font when not.
+  - **Installed fonts are put in the document as real fonts** (`Content/EmbeddedFont.swift`):
+    the TrueType file is cut down to the glyphs used, by emptying the others so glyph
+    numbers stay the same, and embedded as a composite font with a map from codes to
+    glyphs and to characters. Text set this way cannot be told from the document's own.
+    Fonts that are not TrueType outlines (PostScript-flavored, variable, picture fonts)
+    fall back to the font of drawn outlines from Phase 5, which looks a little lighter
+    on screen. Forms, stamps and the OCR layer still use the drawn kind.
+  - **Edits stay local.** A block is set again from its first changed line. A line that
+    starts where an old line started, with all its words still there, is that old line
+    again, spaces and all, so the rest of a paragraph and the paragraphs after it keep
+    the typesetter's line breaks. When the line count changes they move down or up
+    whole. Paragraphs inside a block are told apart by short last lines and by first
+    lines set in or out; indents and the space between paragraphs are kept.
+  - **Pages set by TeX have no spaces**, only gaps, and their fonts' "space" is zero
+    wide. The width of a space is then measured from the block's own gaps.
+  - **A single line may grow to the right** up to a margin's distance from the page
+    edge; a paragraph keeps its width.
+  - **Not editable, on purpose:** turned or slanted text, text inside a form drawn more
+    than once, invisible text (OCR layers), and fonts whose codes cannot be mapped to
+    characters and back. Such blocks can be selected and copied, and the Format panel
+    says why they cannot be changed. Text outside the page's visible box is ignored.
+  - **Every content change reloads PDFKit's copy of the document**, since PDFKit cannot
+    be told that one page's content changed. The view keeps its exact scroll position.
+    On the 158-page Bash manual an edit takes about 50 ms.
+  - **Redaction** (`Text/Redaction.swift`): marks are `Redact` annotations, drawn by the
+    app as red frames (PDFKit's own drawing of them is a solid gray box, and is switched
+    off). Applying removes glyphs whose boxes meet a mark, in the page and in forms it
+    draws; repaints the covered part of pictures; removes shapes that lie inside and
+    annotations that touch; draws black boxes; then writes the whole file out afresh
+    with `rewritten()`, which keeps only what is still referenced. A redacted document
+    is therefore never saved by appending. Undo still works until the file is closed.
+  - **OCR** uses Vision on a rendering of the page and lays the words over it as fully
+    transparent text, each word stretched over its own place. Transparent, not the
+    usual invisible text mode, because that mode does not hide fonts made of drawings.
+  - **In the app**, Edit is a third toolbar mode beside Markup and Form
+    (`Sheaf/Edit`). Clicks go to `ViewerModel.contentMouseDown`; the editor over a block
+    is an `NSTextView` set in a matching installed font with the block's line spacing
+    and indents; drags show a picture of the thing with alignment guides. Find and
+    replace is its own bar and uses the engine's search, not PDFKit's.
+  - Not done: resizing a text block's width; rich text inside one block while typing
+    (bold or a second font on part of it; what is already there keeps its look);
+    changing text in CJK fonts with predefined encodings; clipping paths are not
+    considered, so text hidden by a clip is still listed; dragging a picture out of the
+    window; copying a picture; right-to-left paragraphs are set left to right; the
+    editor shows a stand-in font when the document's is not installed, so its line
+    breaks can differ from the page's until the edit is committed.
+- 2026‑10‑03, Phase 7 done. 227 engine tests, fuzz clean, and a new corpus pass that turns every file into Word, Excel and PDF/A and compares it with itself, at 0 problems (1,924 files; 12 fonts embedded; 1,726 with nothing left that Sheaf knows to fix). How it is built:
+  - **Comparing** (`SheafKit/Review`): pages are matched first (identical pages are fixed
+    points; between them, pages pair with the page most like them, and a page with no
+    partner is "added" or "removed"), then each pair is compared word by word with
+    Myers' shortest-edit algorithm. A change carries the boxes of its words on both
+    sides. Pages whose words are equal are also drawn small by PDFKit and compared as
+    pictures, which finds changed images and layout ("Looks different"); pages that have
+    word changes skip that, since moved text would light up everywhere. The report is a
+    PDF the engine writes itself.
+  - **Compare window** (`Sheaf/Compare`): two plain `PDFView`s whose scrolling and zoom
+    follow each other through the page pairs. Marks are highlight annotations added to
+    the on-screen copies only.
+  - **Word** (`Convert/WordDocument.swift`): blocks become paragraphs (split where the
+    engine sees paragraphs), runs of one font, size, weight, slant and color become runs,
+    with alignment, indents and the space above; pictures go inline (JPEGs as they are,
+    plain 8-bit pictures as PNG); every page is a section of the page's size and margins.
+    No columns, tables or absolute positions: the result is for working with the words.
+  - **Excel** (`Convert/Spreadsheet.swift`): one sheet per page. Lines on one baseline
+    are a row; columns are bands found from where pieces of text sit above one another,
+    with wide pieces (headings) placed last so they do not weld columns together. Cells
+    that read as numbers are numbers; codes, dates and phone numbers stay text.
+  - **Zip** is written in-house (`Convert/ZipArchive.swift`, deflate through zlib).
+  - **PDF/A-2b** (`Convert/Archival.swift`): embeds fonts that are only named, when the
+    very font is installed as TrueType and numbered in a standard way (this covers
+    Helvetica, Times, Courier, Arial and the like); adds an sRGB output intent and XMP
+    with the PDF/A marker; removes scripts, forbidden actions, attachments, XFA, the
+    password, LZW compression and image smoothing flags; makes annotations printable.
+    It lists what it could not fix: fonts not installed, CMYK colors, annotations
+    without a stored picture. **It is not validated**: no validator is bundled and none
+    was run. Treat "nothing left to fix" as "nothing Sheaf knows how to check".
+  - **Flows** (`Sheaf/Flows`): a flow is a named list of steps (recognize text, reduce,
+    watermark, page numbers, rotate, flatten, PDF/A, and Word, Excel or images as a last
+    step), saved as JSON in the app's Application Support folder. `FlowRunner` runs
+    them off the main thread on the same `Toolbox` functions the menus use. Passwords
+    are deliberately not a step: a flow file would have to hold them in the clear.
+  - **Shortcuts**: 16 actions now, among them "Run Flow on Files" with the saved flows
+    as its choices. Quick Actions come from Shortcuts, as before.
+  - Reading a page twice could give different results (ties between equally common
+    fonts or sizes were broken by dictionary order, which Swift randomizes per
+    dictionary). All such ties are now broken by value, and the corpus pass compares
+    every file with itself.
+  - Not done: tables in Word output; multi-column reading order; side-by-side visual
+    diff overlays (onion skin); comparing annotations and form values; conditional and
+    branching flows; a folder-watching runner.
+- 2026‑10‑03, Phase 8 done as far as it can be without an Apple developer account.
+  - **Russian.** `Sheaf/Resources/Localizable.xcstrings` holds all 764 interface strings
+    in English and Russian, with the plural forms Russian needs and singular forms for
+    English. `make strings` syncs the catalog with what the build found in the code and
+    applies `Scripts/translations/ru_*.py`; it lists anything untranslated. The Finder's
+    Services menu and document kinds are translated in `ru.lproj`. The engine's own
+    error messages and the Help Book are English only.
+  - **Help Book.** `Scripts/make-help.py` holds every page and writes
+    `Sheaf/Resources/Sheaf.help` (13 pages, light and dark, with a search index), which
+    goes into the app as a folder. Help ▸ Sheaf Help opens it.
+  - **Tips.** Three TipKit tips on the Edit, Organize Pages and Markup toolbar buttons,
+    one at a time, each gone for good once its feature is used. Help ▸ Show Tips Again.
+  - **Keyboard and VoiceOver.** In Edit mode Tab and ⇧Tab step through the page's text
+    and pictures in reading order and each selection is announced. Icon-only buttons
+    all carry names. The pages themselves are PDFKit's and read as PDFKit reads them.
+  - **Performance**, measured on a 632-page document and on a 209 MB one of large
+    photographs: opening is immediate for both (nothing is read until needed); an edit
+    takes 40 to 80 ms on either. Find and replace was the slow part and was reworked:
+    search runs on all cores off the main thread (632 pages: 9.4 s to about 2 s), fonts
+    are read once per document, and Replace All changes each page in one pass in the
+    background (2,368 replacements on 552 pages: about 15 s, with the window live).
+    Typed text in one typeface now shares one embedded font per document, which grows
+    as needed, where it used to add a font per edit.
+  - **Shipping.** `Scripts/release.sh` archives a Release build, signs it, notarizes
+    and staples the app, packs a disk image and does the same for it. It has been run
+    without a Developer ID, which gives an image that works on this Mac only; the
+    signed path is written from the documentation and untested. `RELEASING.md` has the
+    steps that need your accounts.
+  - **Icon.** `Scripts/make-icon.swift` draws the app icon (fanned sheets held by a
+    band) at every size into the asset catalog. A first version, not a designer's.
+  - **Sparkle is wired but not installed.** `Sheaf/App/Updater.swift` compiles its
+    "Check for Updates…" command only when the Sparkle package is in the project.
+    Adding it downloads third-party code and needs an update feed and signing key, so
+    it is left for you; `RELEASING.md` lists the five steps.
+  - **A change made outside event handling was not counted as unsaved.** AppKit closes
+    an undo step, and only then marks the document as changed, at the end of handling
+    an event. Results of background work (Replace All, Recognize Text, Reduce File Size,
+    flows) arrive outside any event, so the step stayed open and quitting before the
+    next event would not have saved them. `SheafDocument.install` now posts an empty
+    event after registering an undo step, which closes it at once. Found through the
+    automated runs, where a rotation was not saved on quit; it is saved now.
+  - **Arranging like Pages, 2026-10-04.** After Phase 8, the picture and text tools were
+    brought closer to what Pages offers on the right and on right-click, as far as a
+    PDF can carry it:
+    - *Stacking order.* A PDF page has no layers: things cover what was drawn before
+      them. Bring to Front, Send to Back, Forward and Backward move a picture or a
+      block of text in the page's own drawing order. A picture is lifted out together
+      with the state it was drawn in (clip, transparency, colors, marked sections) and
+      put down again; where it lands in the middle of the page's drawing, the state in
+      force there is closed and set up again after it. A move is only offered when
+      something overlaps, and nothing goes behind what covers the whole page.
+      Annotations are ordered among themselves by their place in the page's list.
+    - *Pictures* can be turned (Command-drag a handle), mirrored, made see-through,
+      masked (the whole picture stays in the file; a clip rectangle shows part of it),
+      copied, cut, duplicated (the copy shares the image), and have their background
+      taken out with the system's subject detection. A changed picture is kept in one
+      small group of operations, `q [gs] cm [re W n] Do Q`, which is edited in place.
+    - *Left out, and why:* Distribute and aligning things to each other need more than
+      one thing selected, which the editor does not have yet. Border, shadow and
+      reflection would have to be drawn as separate shapes that nothing ties to the
+      picture afterwards. Text wrap, object placement, lock, group, title and caption
+      are Pages document features with no place in a PDF page. Adjust Image, Super
+      Resolution, Ask Siri, Playground and Pixelmator were not attempted.
+    - Shift-Command-F is now Bring to Front, as in Pages. The form toolbar moved to
+      Shift-Command-M.
+  - **Annotations are drawn by Sheaf, 2026-10-04.** A drawn signature looked blocky
+    when zoomed in. PDFKit keeps every annotation that has a look of its own in a
+    separate layer holding one pixel per point of the page, whatever the zoom or the
+    display, and nothing in the file changes that. So signatures, stamps, shapes,
+    drawings, notes and text boxes are now drawn by `PageAnnotationView`, a view
+    PDFKit puts over each page and moves and zooms with it. Each annotation is a
+    picture made from the look stored in the file, at the zoom in use, and made again
+    when the zoom changes. PDFKit's own copies are switched off on screen. Highlights,
+    underlines, links and form fields are still PDFKit's. Drags and new shapes are
+    drawn the same way, so they are sharp while they move, which they were not before.
+  - **Save options, 2026-10-04.** Preview's save dialog offers a format, PDF/A, two
+    choices about pictures and permissions. Sheaf had these as separate commands.
+    File ▸ Export… now has them in its panel, with the format. File ▸ Save As…, and the
+    first Save of a new document, have them too. SwiftUI owns the document class and
+    its save panel, so `SavePanelOptions` gives that class an override of AppKit's
+    `prepareSavePanel(_:)`, to add the choices, and of `save(to:ofType:for:completionHandler:)`,
+    to make the document what was chosen just before it is written. With nothing
+    chosen both pass straight through. The change to the document is an undo step
+    ("Save Options"), so the window and the file agree and going back is possible.
+    Linearized PDF and Quartz filters are not offered: the engine does not write
+    linearized files, and color filters would mean redrawing every page through
+    Core Graphics, which loses forms, links and text structure.
+  - **Text boxes can be resized, 2026-10-04.** Selected text has a handle on each
+    side, and so has the editor while typing. A PDF stores no box, only where each
+    letter is, so resizing sets the words again between the new sides
+    (`TextRestyle.left` and `.right`), keeping the top line where it was. The same
+    report showed an address opening as one run-on paragraph. Lines are now only
+    joined into a paragraph when they are long enough to be running text (34
+    characters or more in the longest, or justified); blocks of short lines keep
+    every line break, and may grow to the right like a single line does.
+  - **The Format panel is Sheaf's own column, 2026-10-04.** SwiftUI's inspector
+    reached up behind the toolbar, to the top of the window, which read as the
+    toolbar being cut short. The panel is now a column of the detail area: it starts
+    under the toolbar, slides in from the right, and is 280 points wide. Its width is
+    no longer draggable, and the View menu's Show Inspector command is Sheaf's own.
+    It is colored like the system's inspector (the window's color with 6% of the text
+    color over it, its forms' own backgrounds hidden), and rows of tools run the
+    width of the window above both the pages and the panel. Pages no longer pass
+    under the toolbar: the toolbar is see-through, so it showed pages under one part
+    and the panel's backdrop under another, as two toolbars side by side.
+  - **Default PDF app, 2026-10-04.** Sheaf asks once, at its first launch, whether to
+    open PDFs from now on, and Settings ▸ General has a menu of every app that opens
+    PDFs. Both go through `NSWorkspace.setDefaultApplication(at:toOpen:)`. Whether
+    macOS lets a sandboxed app make that change was not tried, since trying changes a
+    setting of the person's Mac; when it refuses, an alert explains the Finder's way.

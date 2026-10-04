@@ -5,7 +5,8 @@ import UniformTypeIdentifiers
 
 /// The sheets that tools show on a document window.
 enum ToolSheet: String, Identifiable {
-    case watermark, headerFooter, info, password, reduce, split, exportImages, scanner
+    case watermark, headerFooter, info, password, reduce, split, exportImages, scanner, recognize
+    case exportWord, exportExcel, exportArchival, blankPage, working
 
     var id: Self { self }
 }
@@ -36,6 +37,7 @@ extension ViewerModel {
         if isOrganizing {
             isMarkupVisible = false
             isFormEditing = false
+            isContentEditing = false
             // Start with the page being read picked, so commands have something to act on.
             if pageIDs.indices.contains(currentPageIndex) { pageSelection = [pageIDs[currentPageIndex]] }
         }
@@ -125,14 +127,46 @@ extension ViewerModel {
         (targetPageIndexes.max() ?? pageCount - 1) + 1
     }
 
-    func insertBlankPage(at index: Int? = nil) {
+    /// Adds an empty page.
+    ///
+    /// - Parameter size: `nil` makes it the size of the page it goes after, so it does not stand out.
+    func insertBlankPage(at index: Int? = nil, size: PageSize? = nil) {
         let position = min(index ?? insertionIndex, pageCount)
         changePages(String(localized: "Insert Blank Page")) { editor, _ in
-            // The same size as its neighbor, so it does not stand out.
-            let neighbor = try editor.geometry(ofPageAt: max(position - 1, 0)).displaySize
-            return [try editor.insertBlankPage(size: neighbor, at: position)]
+            let size = try size ?? editor.geometry(ofPageAt: max(position - 1, 0)).displaySize
+            return [try editor.insertBlankPage(size: size, at: position)]
         }
         showInserted(at: position)
+    }
+
+    /// The size of a page as it is displayed, turned pages turned.
+    func displaySize(ofPageAt index: Int) -> PageSize? {
+        guard let page = document?.page(at: index) else { return nil }
+        let box = page.bounds(for: .cropBox)
+        return page.rotation % 180 == 0 ? PageSize(width: box.width, height: box.height) : PageSize(width: box.height, height: box.width)
+    }
+
+    /// The sizes for a blank page that come from the document itself: that of the page
+    /// it goes after first, then the other sizes the document's pages have.
+    func documentPageSizes(forBlankPageAt index: Int? = nil) -> [BlankPageChoice] {
+        guard pageCount > 0 else { return [] }
+        let neighbor = max(min(index ?? insertionIndex, pageCount) - 1, 0)
+        var choices: [BlankPageChoice] = []
+        var seen: Set<String> = []
+        // A long document is not read to its end for this; the sizes near its start are the likely ones.
+        for pageIndex in [neighbor] + Array(0..<min(pageCount, 200)) {
+            guard choices.count < 5, let size = displaySize(ofPageAt: pageIndex) else { continue }
+            let key = "\(Int(size.width.rounded()))x\(Int(size.height.rounded()))"
+            guard seen.insert(key).inserted else { continue }
+            choices.append(BlankPageChoice(title: String(localized: "Same as Page \(pageIndex + 1) (\(Paper.name(of: size)))"), size: size))
+        }
+        return choices
+    }
+
+    /// Shows the sheet for a blank page of any size.
+    func chooseBlankPageSize(at index: Int? = nil) {
+        blankPagePosition = min(index ?? insertionIndex, pageCount)
+        activeSheet = .blankPage
     }
 
     /// Asks for PDFs or pictures and adds their pages.

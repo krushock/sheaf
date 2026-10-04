@@ -5,6 +5,10 @@ struct SheafApp: App {
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
     @AppStorage(Preferences.showWelcomeAtLaunch) private var showWelcomeAtLaunch = true
 
+    init() {
+        SheafTips.configure()
+    }
+
     var body: some Scene {
         // Listed first so it is the window shown at launch, as in Pages and Xcode.
         Window("Welcome to Sheaf", id: WelcomeView.windowID) {
@@ -23,6 +27,10 @@ struct SheafApp: App {
         .defaultSize(width: 1080, height: 820)
         .commands {
             SheafCommands()
+            UpdateCommands()
+            CommandGroup(after: .help) {
+                Button("Show Tips Again") { SheafTips.showAgain() }
+            }
         }
 
         Window("New from PDFs", id: MergeWindow.windowID) {
@@ -36,6 +44,20 @@ struct SheafApp: App {
             ImagesWindow()
         }
         .defaultSize(width: 620, height: 560)
+        .restorationBehavior(.disabled)
+        .defaultLaunchBehavior(.suppressed)
+
+        Window("Compare Documents", id: CompareWindow.windowID) {
+            CompareWindow()
+        }
+        .defaultSize(width: 1280, height: 820)
+        .restorationBehavior(.disabled)
+        .defaultLaunchBehavior(.suppressed)
+
+        Window("Flows", id: FlowsWindow.windowID) {
+            FlowsWindow()
+        }
+        .defaultSize(width: 780, height: 520)
         .restorationBehavior(.disabled)
         .defaultLaunchBehavior(.suppressed)
 

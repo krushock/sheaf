@@ -1,0 +1,4 @@
+/* The Services menu in the Finder. */
+"Merge with Sheaf" = "Объединить в Sheaf";
+"Make PDF with Sheaf" = "Создать PDF в Sheaf";
+"Reduce File Size with Sheaf" = "Уменьшить размер файла в Sheaf";

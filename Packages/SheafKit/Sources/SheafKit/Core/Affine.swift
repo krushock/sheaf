@@ -30,6 +30,33 @@ struct Affine: Sendable, Equatable {
         )
     }
 
+    var determinant: Double { a * d - b * c }
+
+    /// The transform that undoes this one, or `nil` when it squashes the plane flat.
+    var inverse: Affine? {
+        let det = determinant
+        guard abs(det) > 1e-12 else { return nil }
+        return Affine(
+            a: d / det, b: -b / det, c: -c / det, d: a / det,
+            e: (c * f - d * e) / det, f: (b * e - a * f) / det
+        )
+    }
+
+    init(a: Double = 1, b: Double = 0, c: Double = 0, d: Double = 1, e: Double = 0, f: Double = 0) {
+        self.a = a
+        self.b = b
+        self.c = c
+        self.d = d
+        self.e = e
+        self.f = f
+    }
+
+    /// From the six numbers of a `cm` or `Tm` operator, or a `/Matrix` entry.
+    init?(_ numbers: [Double]) {
+        guard numbers.count == 6 else { return nil }
+        self.init(a: numbers[0], b: numbers[1], c: numbers[2], d: numbers[3], e: numbers[4], f: numbers[5])
+    }
+
     func apply(_ point: PDFPoint) -> PDFPoint {
         PDFPoint(x: a * point.x + c * point.y + e, y: b * point.x + d * point.y + f)
     }
@@ -72,6 +99,24 @@ public struct PageGeometry: Sendable, Equatable {
     public var displaySize: PageSize {
         rotation % 180 == 0 ? PageSize(width: box.width, height: box.height) : PageSize(width: box.height, height: box.width)
     }
+
+    /// Takes a point in the page's own coordinates to where it is on the page as displayed.
+    var toDisplay: Affine { fromDisplay.inverse ?? .identity }
+
+    /// A rectangle in the page's own coordinates, as it lies on the page as displayed.
+    public func displayRect(_ rect: PDFRectangle) -> PDFRectangle {
+        let corners = [PDFPoint(x: rect.x, y: rect.y), PDFPoint(x: rect.x + rect.width, y: rect.y + rect.height)].map(toDisplay.apply)
+        return PDFRectangle(enclosing: corners) ?? rect
+    }
+
+    /// A rectangle on the page as displayed, in the page's own coordinates.
+    public func pageRect(_ rect: PDFRectangle) -> PDFRectangle {
+        let corners = [PDFPoint(x: rect.x, y: rect.y), PDFPoint(x: rect.x + rect.width, y: rect.y + rect.height)].map(fromDisplay.apply)
+        return PDFRectangle(enclosing: corners) ?? rect
+    }
+
+    public func displayPoint(_ point: PDFPoint) -> PDFPoint { toDisplay.apply(point) }
+    public func pagePoint(_ point: PDFPoint) -> PDFPoint { fromDisplay.apply(point) }
 
     /// Takes a point on the page as displayed, measured from its bottom left corner, to
     /// the page's own coordinates. Drawing through this comes out upright however the

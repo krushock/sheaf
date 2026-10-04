@@ -138,6 +138,7 @@ private struct AnnotationRow: View {
         case .circle: "circle"
         case .line: "line.diagonal"
         case .stamp: "seal"
+        case .redact: "rectangle.fill"
         case .link, .other: "questionmark.square.dashed"
         }
     }
@@ -155,6 +156,7 @@ private struct AnnotationRow: View {
         case .circle: "Ellipse"
         case .line: "Line"
         case .stamp: "Stamp"
+        case .redact: "Redaction Mark"
         case .link, .other: "Annotation"
         }
     }

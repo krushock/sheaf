@@ -1,0 +1,3 @@
+/* Kinds of documents, as the Finder names them. */
+"PDF Document" = "Документ PDF";
+"Image" = "Изображение";

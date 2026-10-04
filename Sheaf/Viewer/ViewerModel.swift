@@ -22,7 +22,9 @@ struct SearchResult: Identifiable {
 final class ViewerModel: NSObject {
     @ObservationIgnored let pdfView = SheafPDFView()
     /// The window showing this viewer. Set by the view, since the pages are not always in it.
-    @ObservationIgnored weak var window: NSWindow?
+    @ObservationIgnored weak var window: NSWindow? {
+        didSet { if window != nil { prepareSaveOptions() } }
+    }
     /// The document being shown, which every edit goes through.
     @ObservationIgnored private(set) weak var sheafDocument: SheafDocument?
 
@@ -30,6 +32,12 @@ final class ViewerModel: NSObject {
     private(set) var pageCount = 0
     private(set) var currentPageIndex = 0
     private(set) var isFitToWindow = true
+    /// Whether the zoom follows the window so that a whole page is always in view.
+    private(set) var isFitPage = false
+    /// The zoom as a whole percentage, for showing in the toolbar.
+    private(set) var zoomPercent = 100
+    /// The zoom that fitting a whole page last came to.
+    @ObservationIgnored private var fittedScale: CGFloat = 0
     private(set) var canZoomIn = false
     private(set) var canZoomOut = false
     private(set) var canGoBack = false
@@ -49,7 +57,10 @@ final class ViewerModel: NSObject {
     var isMarkupVisible = false {
         didSet {
             if !isMarkupVisible { tool = .select }
-            if isMarkupVisible { isFormEditing = false }
+            if isMarkupVisible {
+                isFormEditing = false
+                isContentEditing = false
+            }
         }
     }
 
@@ -96,6 +107,8 @@ final class ViewerModel: NSObject {
 
     /// The pages picked in the organizer.
     var pageSelection: Set<ObjectID> = []
+    /// Where the blank page being sized in its sheet will go.
+    @ObservationIgnored var blankPagePosition: Int?
 
     /// The width of a page in the organizer, in points.
     var organizerPageSize: Double = Preferences.organizerPageSize {
@@ -145,6 +158,100 @@ final class ViewerModel: NSObject {
     /// A drag in progress: making, moving or resizing an annotation.
     @ObservationIgnored var drag: DragSession?
 
+    // MARK: Content editing state
+
+    /// Whether the row of editing tools is showing. While it is, clicking text or a
+    /// picture selects it, and double-clicking text puts the cursor in it.
+    var isContentEditing = false {
+        didSet { if isContentEditing != oldValue { contentEditingDidToggle() } }
+    }
+
+    var editTool = EditTool.select {
+        didSet {
+            if editTool != oldValue { pdfView.window?.invalidateCursorRects(for: pdfView) }
+            if editTool != .select { contentSelection = nil }
+        }
+    }
+
+    /// The block of text or the picture picked on a page.
+    var contentSelection: ContentTarget? {
+        didSet {
+            guard contentSelection != oldValue else { return }
+            pdfView.overlay.needsDisplay = true
+            // A mask is changed on the picture that is selected, and no other.
+            if let edit = maskEdit, contentSelection != .image(pageIndex: edit.pageIndex, id: edit.imageID) { maskEdit = nil }
+            // The page is a picture as far as VoiceOver is concerned, so say what was picked.
+            if let description = contentSelectionDescription, let window {
+                NSAccessibility.post(element: window, notification: .announcementRequested, userInfo: [
+                    .announcement: description, .priority: NSAccessibilityPriorityLevel.medium.rawValue,
+                ])
+            }
+        }
+    }
+
+    /// Whether redaction marks are shown as the black boxes they will become.
+    var previewsRedactions = false {
+        didSet { pdfView.overlay.needsDisplay = true }
+    }
+
+    var isApplyRedactionsConfirmationPresented = false
+    /// Something to tell the person about the last editing command.
+    var editMessage: String?
+
+    /// How text made with the text tool looks.
+    var newTextStyle = NewTextStyle()
+
+    /// A drag in progress on a block of text or a picture.
+    @ObservationIgnored var contentDrag: ContentDrag? {
+        didSet { pdfView.overlay.needsDisplay = true }
+    }
+
+    /// The mask of a picture being changed.
+    var maskEdit: MaskEdit? {
+        didSet {
+            pdfView.overlay.needsDisplay = true
+            pdfView.window?.invalidateCursorRects(for: pdfView)
+        }
+    }
+
+    /// Whether the background is being taken out of a picture.
+    var isRemovingBackground = false
+
+    @ObservationIgnored var stackingCache: (key: String, moves: Set<StackingMove>)?
+    @ObservationIgnored var contentCache: [Int: (revision: Int, generation: Int, content: PageContent)] = [:]
+    @ObservationIgnored var markCache: (revision: Int, generation: Int, marks: [Int: [Annotation]])?
+
+    /// Whether a row of tools sits between the toolbar and the pages.
+    var hasToolRow: Bool { isMarkupVisible || isFormEditing || isContentEditing || isReplaceVisible }
+
+    // MARK: Find and replace state
+
+    var isReplaceVisible = false {
+        didSet { if isReplaceVisible != oldValue { replaceVisibilityChanged() } }
+    }
+
+    var replaceQuery = "" {
+        didSet { if replaceQuery != oldValue { scheduleTextSearch() } }
+    }
+
+    var replacement = ""
+    var replaceOptions = TextSearchOptions() {
+        didSet { if replaceOptions != oldValue { scheduleTextSearch() } }
+    }
+
+    var textMatches: [TextMatch] = [] {
+        didSet { pdfView.overlay.needsDisplay = true }
+    }
+
+    var currentMatchIndex: Int? {
+        didSet { pdfView.overlay.needsDisplay = true }
+    }
+
+    var isFindingText = false
+    /// Incremented to ask the find and replace bar to put the cursor in its first field.
+    var replaceFocusRequests = 0
+    @ObservationIgnored var textSearchTask: Task<Void, Never>?
+
     var searchText = "" {
         didSet { if searchText != oldValue { scheduleSearch() } }
     }
@@ -182,6 +289,7 @@ final class ViewerModel: NSObject {
         super.init()
 
         pdfView.viewer = self
+        pdfView.backgroundColor = Self.canvasColor
         pdfView.displaysPageBreaks = true
         pdfView.displaysAsBook = true
         applyLayout()
@@ -191,6 +299,18 @@ final class ViewerModel: NSObject {
             center.addObserver(self, selector: #selector(viewStateChanged), name: name, object: pdfView)
         }
         center.addObserver(self, selector: #selector(visiblePagesChanged), name: .PDFViewVisiblePagesChanged, object: pdfView)
+        pdfView.postsFrameChangedNotifications = true
+        center.addObserver(self, selector: #selector(viewFrameChanged), name: NSView.frameDidChangeNotification, object: pdfView)
+        // Room for every level in the zoom menu, and a little beyond for pinching.
+        pdfView.minScaleFactor = 0.1
+        pdfView.maxScaleFactor = 8
+    }
+
+    /// The gray behind the pages. The system's own choice is almost the sidebar's color,
+    /// so the strip beside a page read as more sidebar and the toolbar seemed to cut
+    /// into it. This is a step darker, which makes the page area one clear block.
+    static let canvasColor = NSColor(name: nil) { appearance in
+        appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? NSColor(white: 0.10, alpha: 1) : NSColor(white: 0.84, alpha: 1)
     }
 
     // MARK: Document
@@ -203,11 +323,18 @@ final class ViewerModel: NSObject {
         // The same document read again keeps its place; a different one starts at the top.
         let isReload = sheafDocument === source && document != nil
         let place = isReload ? (page: currentPageIndex, autoScales: pdfView.autoScales, scale: pdfView.scaleFactor) : nil
+        // When the pages are the same size as before, as after a change to what a page
+        // draws, the view stays exactly where it was.
+        let sameShape = isReload && document?.pageCount == newDocument.pageCount
+        let scrollOrigin = sameShape ? pdfView.scrollOrigin : nil
 
         cancelSearch()
         document?.delegate = nil
         pdfView.endTextEditing(commit: false)
+        pdfView.endContentEditing(commit: false)
         drag = nil
+        contentDrag = nil
+        maskEdit = nil
         selection = nil
 
         sheafDocument = source
@@ -235,11 +362,22 @@ final class ViewerModel: NSObject {
 
         pdfView.document = newDocument
         pdfView.observeScrolling()
+        prepareSaveOptions()
+        // PDFKit's own drawing of the annotations Sheaf draws is switched off for the
+        // pages about to show before they do, so it is never seen.
+        let near = place?.page ?? 0
+        for index in max(near - 2, 0)..<min(near + 3, newDocument.pageCount) { _ = sharpAnnotations(onPage: index) }
         if let place {
             pdfView.autoScales = place.autoScales
             if !place.autoScales { pdfView.scaleFactor = place.scale }
-            let target = min(place.page, max(pageCount - 1, 0))
-            DispatchQueue.main.async { [weak self] in self?.goToPage(index: target) }
+            if let scrollOrigin {
+                pdfView.layoutDocumentView()
+                pdfView.scrollOrigin = scrollOrigin
+                DispatchQueue.main.async { [pdfView] in pdfView.scrollOrigin = scrollOrigin }
+            } else {
+                let target = min(place.page, max(pageCount - 1, 0))
+                DispatchQueue.main.async { [weak self] in self?.goToPage(index: target) }
+            }
         } else {
             switch Preferences.value(Preferences.openingZoom, default: OpeningZoom.fitWidth) {
             case .fitWidth:
@@ -252,6 +390,7 @@ final class ViewerModel: NSObject {
             DispatchQueue.main.async { [pdfView] in pdfView.goToFirstPage(nil) }
         }
         viewStateChanged()
+        hideNativeMarks()
         settledFieldPages = []
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in self?.visiblePagesChanged() }
 
@@ -278,6 +417,9 @@ final class ViewerModel: NSObject {
             currentPageIndex = index
         }
         isFitToWindow = pdfView.autoScales
+        zoomPercent = Int((pdfView.scaleFactor * 100).rounded())
+        // Zooming by hand, as with a pinch, ends keeping the page fitted.
+        if isFitPage, abs(pdfView.scaleFactor - fittedScale) > 0.001 { isFitPage = false }
         canZoomIn = pdfView.canZoomIn
         canZoomOut = pdfView.canZoomOut
         canGoBack = pdfView.canGoBack
@@ -293,20 +435,81 @@ final class ViewerModel: NSObject {
         case .singlePage: pdfView.displayMode = .singlePage
         case .twoPages: pdfView.displayMode = .twoUpContinuous
         }
+        applyFitPage()
     }
 
-    func zoomIn() { pdfView.zoomIn(nil) }
-    func zoomOut() { pdfView.zoomOut(nil) }
+    /// The zoom levels offered in the toolbar's menu, in percent.
+    static let zoomSteps = [25, 50, 75, 100, 125, 150, 200, 300, 400]
+
+    func zoomIn() {
+        isFitPage = false
+        pdfView.zoomIn(nil)
+    }
+
+    func zoomOut() {
+        isFitPage = false
+        pdfView.zoomOut(nil)
+    }
 
     func zoomToActualSize() {
+        setZoom(percent: 100)
+    }
+
+    /// Shows the pages at a fixed zoom.
+    func setZoom(percent: Int) {
+        isFitPage = false
         pdfView.autoScales = false
-        pdfView.scaleFactor = 1
+        pdfView.scaleFactor = CGFloat(percent) / 100
         viewStateChanged()
     }
 
+    /// Whether the pages are at exactly this zoom, by choice and not because fitting the
+    /// window happened to land on it.
+    func isZoomed(to percent: Int) -> Bool {
+        !isFitToWindow && !isFitPage && zoomPercent == percent
+    }
+
+    /// Fits the width of the page to the window, and keeps it fitted as the window changes.
     func zoomToFit() {
+        isFitPage = false
         pdfView.autoScales = true
         viewStateChanged()
+    }
+
+    /// Fits a whole page in the window, and keeps it fitted as the window changes.
+    func zoomToFitPage() {
+        isFitPage = true
+        fittedScale = pdfView.scaleFactor
+        let index = currentPageIndex
+        applyFitPage()
+        // The page being read, squarely in the window: the point of fitting it.
+        goToPage(index: index)
+    }
+
+    private func applyFitPage() {
+        guard isFitPage, let page = pdfView.currentPage ?? document?.page(at: 0) else { return }
+        var size = page.bounds(for: .cropBox).size
+        if page.rotation % 180 != 0 { size = CGSize(width: size.height, height: size.width) }
+        guard size.width > 0, size.height > 0 else { return }
+        // Two pages side by side need twice the width.
+        let across: CGFloat = layout == .twoPages ? 2 : 1
+        // What is left of the view under the toolbar, less the gaps PDFKit leaves around pages.
+        let margins = pdfView.pageBreakMargins
+        let available = CGSize(
+            width: pdfView.bounds.width - (margins.left + margins.right) * across - 8,
+            height: pdfView.bounds.height - pdfView.safeAreaInsets.top - margins.top - margins.bottom - 8
+        )
+        guard available.width > 20, available.height > 20 else { return }
+        let scale = min(available.width / (size.width * across), available.height / size.height)
+        pdfView.autoScales = false
+        fittedScale = min(max(scale, pdfView.minScaleFactor), pdfView.maxScaleFactor)
+        pdfView.scaleFactor = fittedScale
+        viewStateChanged()
+    }
+
+    /// The view changed size: a page that is being kept whole in the window is fitted again.
+    @objc private func viewFrameChanged() {
+        applyFitPage()
     }
 
     // MARK: Navigation
@@ -379,7 +582,9 @@ final class ViewerModel: NSObject {
             // so draw this one from the live page.
             let ratio = aspectRatio(ofPage: index), side = Self.thumbnailPixelSize
             let size = ratio >= 1 ? CGSize(width: side, height: side / ratio) : CGSize(width: side * ratio, height: side)
-            let image = page.thumbnail(of: size, for: .cropBox).cgImage(forProposedRect: nil, context: nil, hints: nil)
+            let image = sheafDocument?.withAllAnnotationsDrawnByPDFKit(onPage: index) {
+                page.thumbnail(of: size, for: .cropBox).cgImage(forProposedRect: nil, context: nil, hints: nil)
+            } ?? nil
             thumbnailCache[id] = image
             return image
         }
