@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 @main
@@ -29,6 +30,10 @@ struct SheafApp: App {
             SheafCommands()
             UpdateCommands()
             CommandGroup(after: .help) {
+                Button("Sheaf and Your Privacy") {
+                    let book = Bundle.main.object(forInfoDictionaryKey: "CFBundleHelpBookName") as? String
+                    NSHelpManager.shared.openHelpAnchor("privacy", inBook: book)
+                }
                 Button("Show Tips Again") { SheafTips.showAgain() }
             }
         }

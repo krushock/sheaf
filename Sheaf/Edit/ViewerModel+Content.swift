@@ -600,7 +600,7 @@ extension ViewerModel {
     func restyleSelectedBlock(_ name: String, coalescing key: String? = nil, _ restyle: TextRestyle) {
         guard case .block(let pageIndex, let id) = contentSelection, let block = selectedBlock, block.isEditable else { return }
         changeContent(name, pageIndex: pageIndex, coalescing: key, following: block.frame) { editor in
-            if restyle.fontName == nil, restyle.fontSize == nil, let color = restyle.color {
+            if let color = restyle.color, restyle == TextRestyle(color: color) {
                 // Only the color: every glyph stays exactly where it is.
                 try editor.setTextColor(color, ofBlock: id, onPageAt: pageIndex)
             } else {
@@ -627,7 +627,9 @@ extension ViewerModel {
     /// Adds a picture to a page, centered on a point, and selects it.
     ///
     /// - Parameter center: On the page as displayed. `nil` is the middle of what is in view.
-    func addPicture(_ data: Data, pageIndex: Int? = nil, center: PDFPoint? = nil) {
+    /// - Parameter tool: For a picture a generative model made, its name, which the picture
+    ///   then carries in its metadata.
+    func addPicture(_ data: Data, pageIndex: Int? = nil, center: PDFPoint? = nil, generatedBy tool: String? = nil) {
         guard let place = placeForNewContent() else { return }
         let pageIndex = pageIndex ?? place.pageIndex
         guard let page = content(ofPage: pageIndex)?.geometry.displaySize else { return }
@@ -637,7 +639,7 @@ extension ViewerModel {
         var placed: PDFRectangle?
         let added = changeContent(String(localized: "Add Picture"), pageIndex: pageIndex) { editor in
             // At its natural size, but no more than half the page, then moved to the spot.
-            var frame = try editor.addImage(data, toPageAt: pageIndex)
+            var frame = try editor.addImage(data, toPageAt: pageIndex, generatedBy: tool)
             let scale = min(1, page.width * 0.5 / frame.width, page.height * 0.5 / frame.height)
             frame.width *= scale
             frame.height *= scale

@@ -170,7 +170,7 @@ struct InspectorView: View {
             if let modified = annotation.modified {
                 LabeledContent("Changed", value: modified.formatted(date: .abbreviated, time: .shortened))
             }
-            Button("Delete", role: .destructive) { viewer.deleteSelection() }
+            ActionRow("Delete", systemImage: "trash", role: .destructive) { viewer.deleteSelection() }
         }
     }
 

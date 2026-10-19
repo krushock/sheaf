@@ -6,6 +6,16 @@ struct HeaderFooterSheet: View {
     let viewer: ViewerModel
     @Environment(\.dismiss) private var dismiss
 
+    /// Opens set up for Bates numbers: one in the bottom right corner of every page.
+    init(viewer: ViewerModel, bates: Bool = false) {
+        self.viewer = viewer
+        guard bates else { return }
+        var spec = HeaderFooter()
+        spec.footer.right = HeaderFooter.batesToken
+        _spec = State(initialValue: spec)
+        _lastFocus = State(initialValue: .footerRight)
+    }
+
     private enum Slot: Hashable { case headerLeft, headerCenter, headerRight, footerLeft, footerCenter, footerRight }
 
     @State private var spec: HeaderFooter = {
@@ -36,6 +46,7 @@ struct HeaderFooterSheet: View {
                             insertButton("Page Count", HeaderFooter.pagesToken)
                             insertButton("Date", HeaderFooter.dateToken)
                             insertButton("Name", HeaderFooter.nameToken)
+                            insertButton("Bates Number", HeaderFooter.batesToken)
                         }
                         .controlSize(.small)
                     }
@@ -44,6 +55,21 @@ struct HeaderFooterSheet: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                if usesBates {
+                    Section {
+                        TextField("Before the Number", text: $spec.batesPrefix, prompt: Text("ACME-"))
+                        TextField("After the Number", text: $spec.batesSuffix)
+                        Stepper("Starts at \(spec.batesStart)", value: $spec.batesStart, in: 0...999_999_999)
+                        Stepper("At Least \(spec.batesDigits) Digits", value: $spec.batesDigits, in: 1...15)
+                    } header: {
+                        Text("Bates Number")
+                    } footer: {
+                        Text("Bates numbers count the pages they are added to, in order: \(spec.batesNumber(at: 0)), \(spec.batesNumber(at: 1)) and so on. To number several documents as one series, start each where the last one ended.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
                 Section {
                     Picker("Font", selection: $font) {
@@ -87,6 +113,7 @@ struct HeaderFooterSheet: View {
             // The preview is of one page on its own, so its number is given by hand.
             var single = spec
             single.firstNumber = spec.firstNumber + page
+            single.batesStart = spec.batesStart + (targets?.firstIndex(of: page) ?? 0)
             for keyPath in [\HeaderFooter.header, \HeaderFooter.footer] {
                 for part in [\HeaderFooter.Row.left, \HeaderFooter.Row.center, \HeaderFooter.Row.right] {
                     single[keyPath: keyPath][keyPath: part] = single[keyPath: keyPath][keyPath: part]
@@ -148,6 +175,11 @@ struct HeaderFooterSheet: View {
         scope.indexes(pageCount: viewer.pageCount, current: viewer.currentPageIndex)
     }
 
+    private var usesBates: Bool {
+        [spec.header.left, spec.header.center, spec.header.right, spec.footer.left, spec.footer.center, spec.footer.right]
+            .contains { $0.contains(HeaderFooter.batesToken) }
+    }
+
     private var finished: HeaderFooter {
         var result = spec
         result.fontName = font.rawValue
@@ -158,7 +190,7 @@ struct HeaderFooterSheet: View {
     private func apply() {
         guard let targets else { return }
         let spec = finished, name = viewer.documentName, date = Self.today
-        viewer.sheafDocument?.apply(String(localized: "Add Header and Footer")) { editor, effect in
+        viewer.sheafDocument?.apply(usesBates ? String(localized: "Add Bates Numbers") : String(localized: "Add Header and Footer")) { editor, effect in
             try editor.addHeaderFooter(spec, toPagesAt: targets, documentName: name, date: date)
             effect.reloadsDisplay = true
             effect.pages = Set(targets)

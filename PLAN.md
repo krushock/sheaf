@@ -202,6 +202,24 @@ step pipelines, batch runner, exposed as Shortcuts actions and Quick Actions).
 String Catalogs (en, ru), VoiceOver, keyboard navigation, Help Book, TipKit onboarding,
 performance pass on 500+ page / 200 MB files, signing, notarization, DMG, Sparkle.
 
+### Phase 9 — Apple Intelligence ✅ done 2026‑10‑04
+What Pages does with the models built into macOS, as far as it fits a PDF, plus what a
+PDF reader calls for. Everything runs on the Mac; Sheaf sends documents nowhere.
+Writing Tools on text being edited and on selected text, Image Playground for new
+pictures, Super Resolution, Auto Crop and Remove Background for pictures on a page,
+descriptions of pictures. For documents: a Summary panel (summary, key points, questions
+answered with the pages they are from), suggested title, subject and keywords, and a
+"Summarize PDF" action for Shortcuts.
+
+### Phase 10 — What Acrobat has ✅ done 2026‑10‑15
+Looked at Acrobat Pro's Edit PDF and its help index and added what Sheaf lacked and a PDF
+editor is expected to have: paragraph formatting in the options panel (bold, italic,
+alignment, line spacing, space before paragraphs), Bates numbering, page backgrounds,
+Crop Pages, Remove Hidden Information (Acrobat's Sanitize), Read Out Loud, and export to
+rich text, web pages and plain text. Left out for now: lists, underline, character spacing
+and horizontal scaling (need new text drawing), layers, measuring, accessibility tagging,
+and certificate signatures.
+
 ## 7. What we intentionally do differently from RevPDF
 No custom nav rail, cards, themes, in‑app Save button or coffee button. Standard toolbar,
 menus, ⌘S, Versions, system appearance. Scanner → Continuity Camera + real scanners.
@@ -655,3 +673,108 @@ Flows also become Shortcuts actions and Finder Quick Actions. Starred → Finder
     `blockquote type="cite"` under Mail's "On …, at …, … wrote:" line, the pictures the
     text shows carried over by Content-ID, and the PDF. Mail then opens that file. The
     From account is Mail's default one and the original is not marked as replied.
+  - **Apple Intelligence, 2026‑10‑04.** Pages (Creator Studio 15.4) was read for what it
+    offers: Writing Tools, Image Playground, Super Resolution, Auto Crop, Remove
+    Background and image descriptions use what is built into macOS; its Generate Image,
+    Generate Shape and Generate Document go to OpenAI and Google through a subscription
+    and were left out, as the brief was the built‑in models.
+    The language model is `FoundationModels`' `SystemLanguageModel` (on this Mac: 8K
+    tokens of context, takes pictures on macOS 27). A document does not fit, so
+    `DocumentReader` reads it in parts: notes on each part, then the summary from the
+    notes (condensed again when the notes are too long). The budget per part comes from
+    the model's own token count of a sample of the document, since tokens per character
+    differ by language. Summaries use `permissiveContentTransformations` guardrails, so a
+    contract that lists crimes is summed up like any other text. Those guardrails cover
+    plain text only: asked to fill in a structure, the model refused such passages. So
+    answers are asked for as plain text, and the properties fall back to plain lines.
+    Questions are answered from the passages that match best. The system's sentence and
+    contextual embeddings ranked passages of the bash manual poorly and took 7 to 20 s,
+    so matching is by words (BM25) with three things that mattered in trials: words are
+    weighted by what kind they are (in a manual "how" and "do" are rare and looked
+    important), strings with signs or digits are matched as they stand ("-e"), and the
+    model first names words to look for, translated when the question is in another
+    language. The first passage of the document always goes along. The model was asked
+    to name its pages and to mark missing answers in several forms; it kept to none of
+    them reliably, so it is asked only for the answer or "N/A", and the pages are those
+    whose passages share most words with the answer.
+    Super Resolution is VideoToolbox's `VTSuperResolutionScalerConfiguration` (4×, input
+    up to 1920 px, model downloaded by macOS on first use; Sheaf asks before a download).
+    The result is stored as a JPEG capped at 4096 px. Auto Crop is Vision's
+    attention saliency, applied as an ordinary mask. Descriptions use the model's vision
+    input, macOS 27 only. Image Playground is the system sheet.
+    The Summary panel shares the right column with the Format panel. Edit ▸ Writing
+    Tools is built from AppKit's own items (`NSMenuItem.writingToolsItems`), since
+    SwiftUI's menu did not get them by itself.
+  - **Private Cloud Compute, 2026‑10‑04.** Asked for as an option. `DocumentReader` takes
+    a `ReadingEngine` (this Mac, or `PrivateCloudComputeLanguageModel`: 32K tokens of
+    context, reasoning), chosen in Settings ▸ Intelligence and in the Summary panel, with
+    larger parts and longer notes for the cloud model. When the cloud fails (network,
+    limit, anything but a stop or an empty document) the model on this Mac does the work
+    and the result says why. It cannot be used yet: the service wants the managed
+    entitlement `com.apple.developer.private-cloud-compute`, which Apple grants on
+    request. Found by trying: an ad hoc signed build gets "Operation not permitted"
+    (ModelManagerError 1046), a development‑signed one is stopped by the framework with a
+    fatal "Missing entitlement". So Sheaf reads its own entitlements and offers and uses
+    the cloud model only when the key is there. Until then the choice is hidden: no
+    Settings pane, nothing in the panel, no mention in the help. Steps to get it are in
+    RELEASING.md.
+  - **Privacy and legal audit, 2026‑10‑14.** Checked against a list of ten legal traps of
+    web apps; most do not apply (no backend, no accounts, no network access, no analytics,
+    no payments, no email). Fixed what did: saved signatures are sealed with AES‑GCM, the
+    key in the login Keychain (`SignatureVault`), the old plain file migrated and removed;
+    the author name written into markup is a setting that may be empty (Preferences
+    `markup.authorName`); notes made from Apple Intelligence say so and are signed
+    "Apple Intelligence"; the panel's caption names Apple Intelligence; pictures from Image
+    Playground carry IPTC `trainedAlgorithmicMedia` XMP on the image XObject (engine
+    `addImage(…, generatedBy:)`), since re‑encoding into the PDF drops Apple's own mark;
+    copies made for Mail and scanned pages are removed after use and swept at launch
+    (`TemporaryFiles`); a privacy page in the Help book, linked from the Help menu; labels
+    for three icon‑only buttons. Left open: documents Sheaf writes are untagged (no PDF/UA),
+    and US export classification for the AES encryption Sheaf includes.
+  - **Invisible typed text in LaTeX PDFs, 2026‑10‑15.** Reported on a Beamer slide: text added
+    to a title was kept but did not show until edited again. pdfTeX gives every code in a
+    range a width, also the ones whose glyphs it left out of the subset, and the engine took a
+    width as proof of a glyph, so "5" and "j" were written in the slide's font and drew
+    nothing. `PageFont` now also asks the font program which glyphs it carries: the
+    descriptor's CharSet, or the CharStrings in the eexec part of a Type 1 program
+    (`Type1Program`). Compact (CFF) programs are still judged by their widths only.
+    Text already written that way is set again when its block is next edited
+    (`PageFont.draws`). Found on the user's own file; my first test runs on it saved edits
+    into it, since the app saves in place when it quits. Restored from the macOS version
+    store, and `Scripts/snapshot.sh` now always opens copies.
+  - **Editor in the document's own font, 2026‑10‑15.** The editor showed text in an
+    installed look-alike (Helvetica for LaTeX's CMSS), which is wider, so lines broke
+    differently and the text looked resized. The engine now tells which embedded font
+    program a block uses (`TextBlock.fontProgramID`, `PDFEditor.fontProgram`), and the app
+    loads it with `CTFontManagerCreateFontDescriptorFromData` (works for the Type 1 subsets
+    of pdfTeX), with the installed font in its cascade list for letters the subset lacks.
+    It is used only when macOS finds glyphs for the block's letters and their widths match
+    the page's within 3% (`EditorFont`), since a subset may number its glyphs its own way.
+  - **Tools at the side, as in Inkpage, 2026‑10‑15.** The user found Inkpage, their note-taking
+    app, clearer, and asked for its design patterns. Taken over: one
+    floating glass strip of tools at the side of the pages (`ToolStrip`), the options of the
+    tool in hand in a glass panel beside it, opened and closed by pressing the tool again;
+    labels that appear at once on hover (`named`); Inkpage's round colour swatches and dotted
+    level slider (`FloatingControls`); a shield under floating bars so the page does not take
+    their clicks; the zoom floating at the foot; the strip movable to either side. Sheaf's
+    ways of working (marking up, editing the page's content, building a form) stay as they
+    were underneath; taking a tool switches to its one (`ViewerModel.take`). What is
+    selected shows its old Format panel settings in the same floating panel. The three rows
+    of tools, the Format column, and the Markup, Edit, Form, Format and zoom items of the
+    toolbar went. The pages keep a 64‑point margin on the strip's side so it never covers them.
+- **2026‑10‑15 Paragraph boxes are remembered on the page.** A centered or right-aligned
+    paragraph's lines are narrower than the box they were set in, and nothing in a PDF says
+    how wide that box was, so centering and then going back to the left drifted. Sheaf now
+    notes the box it set a paragraph in under a private `SheafTextBoxes` key on the page
+    (sides and top, as displayed) and uses it the next time the same paragraph is set.
+    Other programs ignore the key; Remove Hidden Information takes it out with other
+    private data. A single line with no remembered box uses the page's text column: from
+    where its text starts furthest left to where its paragraphs reach furthest right.
+- **2026‑10‑15 A centered paragraph whose full lines reach both sides** used to be read as
+    justified, because full lines look the same either way. The last line decides now:
+    short and in the middle means centered, short against the right side means right.
+- **2026‑10‑15 Removing hidden information writes the file afresh**, like redaction, so
+    removed objects and anything deleted earlier are gone from the file, not just unlinked.
+- **2026‑10‑15 Rich text, web page and plain text export** go through the Word converter
+    and AppKit's own readers and writers, so all four exports agree on paragraphs and styles.
+

@@ -30,24 +30,63 @@ struct SavedSignature: Codable, Identifiable, Equatable {
     }
 }
 
-/// The signatures saved on this Mac, kept in the app's Application Support folder.
+/// The signatures saved on this Mac, kept encrypted in the app's Application Support
+/// folder with the key in the Keychain (see `SignatureVault`).
 @Observable
 final class SignatureStore {
     static let shared = SignatureStore()
 
     private(set) var signatures: [SavedSignature] = []
+    /// Why saved signatures could not be read, when they could not. Nothing is written
+    /// over the file then, so that they are not lost.
+    private(set) var problem: String?
 
-    private let fileURL: URL? = {
+    /// The Keychain entry that holds the key. Debug runs driven by a script use one of
+    /// their own and keep nothing on disk, so they neither touch nor prompt for the real one.
+    private let account: String
+    private let keepsFile: Bool
+
+    private static let folder: URL? = {
         guard let folder = try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
         else { return nil }
         let own = folder.appendingPathComponent("Sheaf", isDirectory: true)
         try? FileManager.default.createDirectory(at: own, withIntermediateDirectories: true)
-        return own.appendingPathComponent("Signatures.json")
+        return own
     }()
 
+    private let fileURL = folder?.appendingPathComponent("Signatures.sealed")
+    /// Where signatures were kept, unencrypted, before.
+    private let plainURL = folder?.appendingPathComponent("Signatures.json")
+
     private init() {
-        if let fileURL, let data = try? Data(contentsOf: fileURL), let saved = try? JSONDecoder().decode([SavedSignature].self, from: data) {
+        #if DEBUG
+        let isScripted = UserDefaults.standard.object(forKey: "SnapshotWindows") != nil
+        #else
+        let isScripted = false
+        #endif
+        account = isScripted ? "signatures-key-debug" : "signatures-key"
+        keepsFile = !isScripted
+        guard keepsFile else { return }
+        load()
+    }
+
+    private func load() {
+        let manager = FileManager.default
+        if let fileURL, let sealed = try? Data(contentsOf: fileURL) {
+            do {
+                guard let key = try SignatureVault.key(account: account, create: false) else {
+                    problem = String(localized: "The key to your saved signatures is missing from the Keychain.")
+                    return
+                }
+                signatures = try JSONDecoder().decode([SavedSignature].self, from: SignatureVault.open(sealed, with: key))
+            } catch {
+                problem = String(localized: "Your saved signatures could not be read. \(error.localizedDescription)")
+            }
+        } else if let plainURL, let data = try? Data(contentsOf: plainURL), let saved = try? JSONDecoder().decode([SavedSignature].self, from: data) {
+            // Signatures saved before they were encrypted: sealed now, and the plain copy
+            // removed only once the sealed one is safely written.
             signatures = saved
+            if save() { try? manager.removeItem(at: plainURL) }
         }
     }
 
@@ -61,9 +100,18 @@ final class SignatureStore {
         save()
     }
 
-    private func save() {
-        guard let fileURL, let data = try? JSONEncoder().encode(signatures) else { return }
-        try? data.write(to: fileURL, options: .atomic)
+    @discardableResult
+    private func save() -> Bool {
+        guard keepsFile, problem == nil, let fileURL else { return false }
+        do {
+            guard let key = try SignatureVault.key(account: account, create: true) else { return false }
+            let sealed = try SignatureVault.seal(try JSONEncoder().encode(signatures), with: key)
+            try sealed.write(to: fileURL, options: [.atomic, .completeFileProtection])
+            return true
+        } catch {
+            problem = String(localized: "Your signatures could not be saved. \(error.localizedDescription)")
+            return false
+        }
     }
 }
 
@@ -170,7 +218,7 @@ extension ViewerModel {
             var stamp = Annotation(kind: .stamp, rect: PDFRectangle(x: space.x + (space.width - width) / 2, y: space.y + (space.height - height) / 2, width: width, height: height))
             stamp.stamp = content
             stamp.color = isImage ? nil : .black
-            stamp.author = NSFullUserName()
+            stamp.author = Preferences.markupAuthorValue
             sheafDocument?.apply(String(localized: "Add Signature")) { editor, effect in
                 effect.pages = [target.pageIndex]
                 try editor.addAnnotation(stamp, toPageAt: target.pageIndex)

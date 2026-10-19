@@ -10,6 +10,8 @@ final class PageFont: @unchecked Sendable {
     /// Whether the document carries only the glyphs it uses.
     let isSubset: Bool
     let isEmbedded: Bool
+    /// The stream holding the font program the document carries, when it carries one.
+    let programID: ObjectID?
     /// How many bytes make one character code.
     let codeLength: Int
     let traits: FontMatcher.Traits
@@ -24,6 +26,9 @@ final class PageFont: @unchecked Sendable {
     private var defaultWidth = 0.0
     private var texts: [Int: String] = [:]
     private var codes: [String: Int] = [:]
+    /// The codes whose glyphs the font program is known to carry, or `nil` when that is not
+    /// known, in which case every code is taken to draw.
+    private var drawable: Set<Int>?
     /// The installed font to measure with when the document gives no widths.
     private var metricsFont: String?
 
@@ -95,6 +100,7 @@ final class PageFont: @unchecked Sendable {
         }
 
         isEmbedded = descriptor.map { $0["FontFile"] != nil || $0["FontFile2"] != nil || $0["FontFile3"] != nil } ?? (kind == .type3)
+        programID = descriptor.flatMap { $0["FontFile"]?.referenceValue ?? $0["FontFile2"]?.referenceValue ?? $0["FontFile3"]?.referenceValue }
         let flags = try descriptor.map { try source.value("Flags", in: $0) }?.intValue ?? 0
         let lowered = name.lowercased()
         let weight = try descriptor.map { try source.value("FontWeight", in: $0) }?.doubleValue ?? 400
@@ -161,13 +167,36 @@ final class PageFont: @unchecked Sendable {
         isReliable = reliable
 
         // The reverse: which code to write for some text. Only codes the font really has
-        // a glyph for are offered, which for a subset means the codes it gives a width.
+        // a glyph for are offered, which for a subset means the codes it gives a width,
+        // and, where the font program can be read, the glyphs it carries: pdfTeX gives a
+        // width to every code in a range, also to the ones whose glyphs it left out, and
+        // text written with those codes draws nothing.
+        let carried = isSubset && kind == .simple ? try Self.carriedTexts(descriptor: descriptor, source: source) : nil
+        if let carried { drawable = Set(texts.filter { $0.value == " " || carried.contains($0.value) }.keys) }
         for (code, text) in texts.sorted(by: { $0.key < $1.key }) where codes[text] == nil {
             if kind != .composite, !widths.isEmpty {
                 guard let width = widths[code], width > 0 || text == " " else { continue }
             }
+            if let carried, text != " ", !carried.contains(text) { continue }
             codes[text] = code
         }
+    }
+
+    /// The text of the glyphs an embedded Type 1 font carries, by their names: from the
+    /// descriptor's CharSet when it has one, else from the font program itself. `nil` when
+    /// that cannot be told, as for compact and TrueType font programs.
+    static func carriedTexts(descriptor: PDFDictionary?, source: some ObjectSource) throws -> Set<String>? {
+        guard let descriptor else { return nil }
+        var names: [String] = []
+        if let charSet = try source.value("CharSet", in: descriptor).stringValue {
+            names = String(decoding: charSet, as: UTF8.self).split(separator: "/").map { $0.trimmingCharacters(in: .whitespaces) }
+        } else if let stream = try source.value("FontFile", in: descriptor).streamValue, let program = try? source.decodedData(of: stream) {
+            names = Type1Program.glyphNames(in: program) ?? []
+        }
+        let texts = names.filter { $0 != ".notdef" }.compactMap { Encodings.text(forGlyphNamed: $0) }
+        // Names of the font's own making say nothing about which text it can show.
+        guard !texts.isEmpty, texts.count * 2 >= names.filter({ $0 != ".notdef" }).count else { return nil }
+        return Set(texts)
     }
 
     /// A glyph's width in thousandths of the font size.
@@ -185,6 +214,10 @@ final class PageFont: @unchecked Sendable {
 
     /// The code that draws some text, or `nil` when the font has no glyph known to draw it.
     func code(for text: String) -> Int? { codes[text] }
+
+    /// Whether a code the page already shows draws anything: false for text written, by
+    /// Sheaf before 2026-10-15 or by another tool, with codes the subset has no glyphs for.
+    func draws(_ code: Int) -> Bool { drawable?.contains(code) ?? true }
 
     /// Splits the bytes of a shown string into character codes.
     func codes(in string: Data) -> [Int] {

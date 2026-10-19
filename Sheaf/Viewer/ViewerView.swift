@@ -1,4 +1,5 @@
 import AppKit
+import ImagePlayground
 import SwiftUI
 import TipKit
 
@@ -33,13 +34,32 @@ struct ViewerView: View {
                 toolRows
                 HStack(spacing: 0) {
                     pages
-                    if viewer.isInspectorVisible {
-                        FormatPanel(viewer: viewer)
+                        // A margin the strip stands in, so that it never covers a page; the
+                        // panel of options does, while it is open.
+                        .padding(viewer.toolsOnLeft ? .leading : .trailing, viewer.isOrganizing ? 0 : 64)
+                        .background(Color(nsColor: viewer.pdfView.backgroundColor))
+                        // The tools float over the pages at one side, as in Inkpage: the strip,
+                        // the options of the tool in hand beside it, and the zoom at the foot.
+                        .overlay(alignment: viewer.toolsOnLeft ? .topLeading : .topTrailing) {
+                            if !viewer.isOrganizing {
+                                GeometryReader { geometry in
+                                    VStack(alignment: viewer.toolsOnLeft ? .leading : .trailing, spacing: 10) {
+                                        ToolStrip(viewer: viewer, room: geometry.size.height - 24)
+                                        Spacer(minLength: 0)
+                                        ZoomCapsule(viewer: viewer)
+                                    }
+                                    .padding(12)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: viewer.toolsOnLeft ? .topLeading : .topTrailing)
+                                }
+                            }
+                        }
+                    if viewer.isAssistantVisible {
+                        AssistantPanel(viewer: viewer)
                             .transition(.move(edge: .trailing))
                     }
                 }
             }
-            .animation(.easeInOut(duration: 0.22), value: viewer.isInspectorVisible)
+            .animation(.easeInOut(duration: 0.22), value: viewer.isAssistantVisible)
         }
         .background(WindowReader { viewer.window = $0 })
         // Whether the file came out of a message in Mail, which File > Reply and closing ask about.
@@ -57,9 +77,6 @@ struct ViewerView: View {
                 SidebarMenu(viewer: viewer)
             }
             ToolbarItem {
-                ZoomMenu(viewer: viewer)
-            }
-            ToolbarItem {
                 Toggle(isOn: $viewer.isOrganizing) {
                     Label("Organize Pages", systemImage: "rectangle.grid.3x2")
                 }
@@ -67,27 +84,7 @@ struct ViewerView: View {
                 .popoverTip(tips.currentTip as? OrganizeTip)
             }
             ToolbarItem {
-                Toggle(isOn: $viewer.isMarkupVisible) {
-                    Label("Markup", systemImage: "pencil.tip.crop.circle")
-                }
-                .help("Show the markup tools")
-                .disabled(viewer.sheafDocument?.isEditable != true || viewer.isOrganizing)
-                .popoverTip(tips.currentTip as? MarkupTip)
-            }
-            ToolbarItem {
-                Toggle(isOn: $viewer.isContentEditing) {
-                    Label("Edit", systemImage: "character.cursor.ibeam")
-                }
-                .help("Change the text and pictures on the pages")
-                .disabled(viewer.sheafDocument?.isEditable != true || viewer.isOrganizing)
-                .popoverTip(tips.currentTip as? EditTip)
-            }
-            ToolbarItem {
-                Toggle(isOn: $viewer.isFormEditing) {
-                    Label("Form", systemImage: "rectangle.and.pencil.and.ellipsis")
-                }
-                .help("Add and change form fields")
-                .disabled(viewer.sheafDocument?.isEditable != true || viewer.isOrganizing)
+                DocumentToolsMenu(viewer: viewer)
             }
             ToolbarItem {
                 if let fileURL {
@@ -99,16 +96,25 @@ struct ViewerView: View {
                 }
             }
             ToolbarItem {
-                Toggle(isOn: $viewer.isInspectorVisible) {
-                    Label("Format", systemImage: "paintbrush")
+                Toggle(isOn: $viewer.isAssistantVisible) {
+                    Label("Summary", systemImage: "apple.intelligence")
                 }
-                .help("Show or hide the Format panel")
+                .help("Sum the document up and ask about it, with Apple Intelligence")
             }
         }
+        // Reading aloud ends with the window.
+        .onDisappear { viewer.pageReader.stop() }
         .sheet(item: $viewer.activeSheet) { sheet in
             switch sheet {
             case .watermark: WatermarkSheet(viewer: viewer)
             case .headerFooter: HeaderFooterSheet(viewer: viewer)
+            case .bates: HeaderFooterSheet(viewer: viewer, bates: true)
+            case .cropPages: CropPagesSheet(viewer: viewer)
+            case .background: BackgroundSheet(viewer: viewer)
+            case .hiddenInformation: HiddenInformationSheet(viewer: viewer)
+            case .exportText: ExportSheet(viewer: viewer, kind: .text)
+            case .exportRichText: ExportSheet(viewer: viewer, kind: .richText)
+            case .exportWebPage: ExportSheet(viewer: viewer, kind: .webPage)
             case .info: DocumentInfoSheet(viewer: viewer)
             case .password: PasswordSheet(viewer: viewer)
             case .reduce: ReduceSheet(viewer: viewer)
@@ -126,6 +132,16 @@ struct ViewerView: View {
             case .exportExcel: ExportSheet(viewer: viewer, kind: .excel)
             case .exportArchival: ExportSheet(viewer: viewer, kind: .archival)
             }
+        }
+        // Insert > Image Playground: the system's sheet, whose picture goes on the page.
+        .imagePlaygroundSheet(isPresented: $viewer.isImagePlaygroundPresented, concepts: viewer.playgroundConcepts, sourceImage: viewer.playgroundSource) { url in
+            viewer.addPlaygroundPicture(at: url)
+        }
+        .alert("Download Super Resolution?", isPresented: $viewer.isSuperResolutionDownloadPresented) {
+            Button("Download") { viewer.downloadSuperResolutionAndEnlarge() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("macOS downloads what Super Resolution needs from Apple once. After that it works on this Mac, without the internet.")
         }
         // File > Import from iPhone or iPad delivers photos and scans here as new pages.
         .importsItemProviders([.pdf, .image]) { providers in
@@ -181,21 +197,11 @@ struct ViewerView: View {
     /// Whatever row of tools is out, above the pages and the Format panel.
     @ViewBuilder private var toolRows: some View {
         // The line under the toolbar. A row of tools reads as part of the toolbar and has the line under itself.
-        if !viewer.hasToolRow, !viewer.isOrganizing { Divider() }
+        if !viewer.isReplaceVisible, !viewer.isOrganizing { Divider() }
         if viewer.isOrganizing {
             OrganizerBar(viewer: viewer)
             Divider()
         } else {
-            if viewer.isFormEditing {
-                FormBar(viewer: viewer)
-                Divider()
-            } else if viewer.isMarkupVisible {
-                MarkupBar(viewer: viewer)
-                Divider()
-            } else if viewer.isContentEditing {
-                EditBar(viewer: viewer)
-                Divider()
-            }
             if viewer.isReplaceVisible {
                 ReplaceBar(viewer: viewer)
                 Divider()
@@ -221,66 +227,6 @@ struct ViewerView: View {
             get: { viewer.isSidebarVisible ? .all : .detailOnly },
             set: { viewer.isSidebarVisible = $0 != .detailOnly }
         )
-    }
-}
-
-/// The Format panel: a column on the right, under the toolbar, that looks like the
-/// system's inspector does: a light gray a step off the window's own, with the groups
-/// of controls a step darker on it.
-private struct FormatPanel: View {
-    let viewer: ViewerModel
-
-    var body: some View {
-        InspectorView(viewer: viewer)
-            // The forms inside bring a background of their own, which would hide the panel's.
-            .scrollContentBackground(.hidden)
-            .frame(width: 280)
-            .frame(maxHeight: .infinity)
-            // As views, not as a style: a style would fill up behind the toolbar as well.
-            .background {
-                ZStack {
-                    Color(nsColor: .windowBackgroundColor)
-                    Color.primary.opacity(0.06)
-                }
-            }
-            .overlay(alignment: .leading) { Rectangle().fill(.separator).frame(width: 1) }
-    }
-}
-
-/// The zoom menu in the toolbar: it shows the zoom and offers the page layout, a list
-/// of zoom levels, and fitting to the window, as the one in Pages does.
-private struct ZoomMenu: View {
-    @Bindable var viewer: ViewerModel
-
-    var body: some View {
-        Menu {
-            Picker("Page layout", selection: $viewer.layout) {
-                ForEach(PageLayout.allCases) { layout in
-                    Text(layout.title).tag(layout)
-                }
-            }
-            .pickerStyle(.inline)
-            .labelsHidden()
-
-            Divider()
-
-            ForEach(ViewerModel.zoomSteps, id: \.self) { percent in
-                Toggle(isOn: Binding(get: { viewer.isZoomed(to: percent) }, set: { _ in viewer.setZoom(percent: percent) })) {
-                    Text(Double(percent) / 100, format: .percent)
-                }
-            }
-
-            Divider()
-
-            Toggle("Fit Width", isOn: Binding(get: { viewer.isFitToWindow }, set: { _ in viewer.zoomToFit() }))
-            Toggle("Fit Page", isOn: Binding(get: { viewer.isFitPage }, set: { _ in viewer.zoomToFitPage() }))
-        } label: {
-            Text(Double(viewer.zoomPercent) / 100, format: .percent)
-                .monospacedDigit()
-        }
-        .help("Zoom")
-        .accessibilityLabel("Zoom")
-        .accessibilityValue(Text(Double(viewer.zoomPercent) / 100, format: .percent))
     }
 }
 
@@ -323,3 +269,76 @@ struct WindowReader: NSViewRepresentable {
         }
     }
 }
+
+/// The tools that work on the whole document, in one menu of the toolbar, so that they are
+/// at hand without searching the menu bar: shrinking, protecting, converting, stamping
+/// every page, making scans searchable, comparing, running a flow.
+private struct DocumentToolsMenu: View {
+    @Bindable var viewer: ViewerModel
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        let editable = viewer.sheafDocument?.isEditable == true
+        Menu {
+            Section {
+                Button("Reduce File Size…", systemImage: "arrow.down.right.and.arrow.up.left") { viewer.activeSheet = .reduce }
+                    .disabled(!editable)
+                Button(viewer.sheafDocument?.password == nil ? "Set Password…" : "Change Password…", systemImage: "lock") { viewer.activeSheet = .password }
+                    .disabled(!editable)
+                Button("Document Info…", systemImage: "info.circle") { viewer.activeSheet = .info }
+            }
+            Section {
+                Button("Recognize Text…", systemImage: "text.viewfinder") { viewer.activeSheet = .recognize }
+                    .disabled(!editable)
+                Button("Watermark…", systemImage: "drop") { viewer.activeSheet = .watermark }
+                    .disabled(!editable)
+                Button("Header and Footer…", systemImage: "rectangle.topthird.inset.filled") { viewer.activeSheet = .headerFooter }
+                    .disabled(!editable)
+                Button("Bates Numbering…", systemImage: "number") { viewer.activeSheet = .bates }
+                    .disabled(!editable)
+                Button("Background…", systemImage: "rectangle.fill") { viewer.activeSheet = .background }
+                    .disabled(!editable)
+                Button("Crop Pages…", systemImage: "crop") { viewer.activeSheet = .cropPages }
+                    .disabled(!editable)
+                Button("Flatten Annotations…", systemImage: "square.3.layers.3d.down.right") { viewer.isFlattenConfirmationPresented = true }
+                    .disabled(!editable)
+            }
+            Section {
+                Button("Remove Hidden Information…", systemImage: "eye.slash") { viewer.activeSheet = .hiddenInformation }
+                    .disabled(!editable)
+                Button(viewer.isReadingAloud ? "Stop Reading Out Loud" : "Read Out Loud", systemImage: viewer.isReadingAloud ? "stop.circle" : "speaker.wave.2") { viewer.toggleReadingAloud() }
+            }
+            Section {
+                Menu("Export To", systemImage: "square.and.arrow.up.on.square") {
+                    Button("Word…") { viewer.activeSheet = .exportWord }
+                    Button("Excel…") { viewer.activeSheet = .exportExcel }
+                    Button("PDF/A…") { viewer.activeSheet = .exportArchival }
+                    Button("Images…") { viewer.activeSheet = .exportImages }
+                    Divider()
+                    Button("Rich Text…") { viewer.activeSheet = .exportRichText }
+                    Button("Web Page…") { viewer.activeSheet = .exportWebPage }
+                    Button("Plain Text…") { viewer.activeSheet = .exportText }
+                }
+                Button("Split into Documents…", systemImage: "rectangle.split.2x1") { viewer.activeSheet = .split }
+                    .disabled(viewer.pageCount < 2)
+                Button("Compare with…", systemImage: "rectangle.on.rectangle.angled") { viewer.compareWithAnother() }
+                Menu("Run Flow", systemImage: "point.3.connected.trianglepath.dotted") {
+                    ForEach(FlowStore.shared.flows) { flow in
+                        Button(flow.name) { viewer.run(flow) }
+                            .disabled(flow.steps.isEmpty || !editable)
+                    }
+                    Divider()
+                    Button("Edit Flows…") { openWindow(id: FlowsWindow.windowID) }
+                }
+            }
+            Section {
+                Button("Print…", systemImage: "printer") { viewer.printDocument() }
+            }
+        } label: {
+            Label("Document Tools", systemImage: "wrench.and.screwdriver")
+        }
+        .help("Tools for the whole document: reduce its size, set a password, recognize text, convert, compare")
+        .disabled(viewer.isOrganizing)
+    }
+}
+

@@ -405,9 +405,9 @@ extension ViewerModel {
     // MARK: Changing the document
 
     @discardableResult
-    func add(_ annotation: Annotation, pageIndex: Int, name: String) -> ObjectID? {
+    func add(_ annotation: Annotation, pageIndex: Int, name: String, author: String? = Preferences.markupAuthorValue) -> ObjectID? {
         var stamped = annotation
-        stamped.author = NSFullUserName()
+        stamped.author = author
         stamped.modified = now()
         return sheafDocument?.apply(name) { editor, effect in
             effect.pages = [pageIndex]
@@ -478,7 +478,7 @@ extension ViewerModel {
         guard !quads.isEmpty else { return }
         let tool: MarkupTool = kind == .underline ? .underline : kind == .strikeOut ? .strikeOut : .highlight
         let style = style(for: tool)
-        let author = NSFullUserName(), date = now()
+        let author = Preferences.markupAuthorValue, date = now()
         let name: String = switch kind {
         case .underline: String(localized: "Underline")
         case .strikeOut: String(localized: "Strikethrough")

@@ -55,6 +55,8 @@ public struct HeaderFooter: Sendable, Equatable {
     public static let dateToken = "{date}"
     /// Replaced by the document's name.
     public static let nameToken = "{name}"
+    /// Replaced by the page's Bates number, counted among the pages marked.
+    public static let batesToken = "{bates}"
 
     public var header = Row()
     public var footer = Row()
@@ -68,8 +70,21 @@ public struct HeaderFooter: Sendable, Equatable {
     public var sideMargin = 54.0
     /// The number the document's first page gets.
     public var firstNumber = 1
+    /// What a Bates number is made of: the number the first marked page gets, how many
+    /// digits it has at least, and the text before and after it.
+    public var batesStart = 1
+    public var batesDigits = 6
+    public var batesPrefix = ""
+    public var batesSuffix = ""
 
     public init() {}
+
+    /// The Bates number of the page that comes at some place among the marked pages.
+    public func batesNumber(at position: Int) -> String {
+        let number = String(batesStart + position)
+        let padding = String(repeating: "0", count: max(min(batesDigits, 15) - number.count, 0))
+        return batesPrefix + padding + number + batesSuffix
+    }
 
     public var isEmpty: Bool { header.isEmpty && footer.isEmpty }
 }
@@ -236,11 +251,12 @@ extension PDFEditor {
         let lastNumber = pages.count + spec.firstNumber - 1
 
         var wrappers = ContentWrappers()
-        for index in Set(targets).sorted() {
+        for (position, index) in Set(targets).sorted().enumerated() {
             let geometry = try geometry(ofPageAt: index)
             let page = geometry.displaySize
             func filled(_ text: String) -> String {
-                text.replacingOccurrences(of: HeaderFooter.pageToken, with: "\(index + spec.firstNumber)")
+                text.replacingOccurrences(of: HeaderFooter.batesToken, with: spec.batesNumber(at: position))
+                    .replacingOccurrences(of: HeaderFooter.pageToken, with: "\(index + spec.firstNumber)")
                     .replacingOccurrences(of: HeaderFooter.pagesToken, with: "\(lastNumber)")
                     .replacingOccurrences(of: HeaderFooter.dateToken, with: date)
                     .replacingOccurrences(of: HeaderFooter.nameToken, with: documentName)
@@ -264,6 +280,38 @@ extension PDFEditor {
             let color = "\(Serializer.format(spec.color.red)) \(Serializer.format(spec.color.green)) \(Serializer.format(spec.color.blue)) rg"
             let content = "/Artifact <</Type /Pagination>> BDC\nq \(color)\n\(paths)f\nQ\nEMC\n"
             try addDrawing(toPage: pages[index], behind: false, wrappers: &wrappers) { _ in Data(content.utf8) }
+        }
+    }
+
+    // MARK: Background
+
+    /// Fills pages with a color behind what they show, as paper of that color would.
+    ///
+    /// - Parameters:
+    ///   - opacity: How much of the color shows, from 0 to 1.
+    ///   - indexes: The pages to fill. All of them when `nil`.
+    public mutating func addBackground(_ color: PDFColor, opacity: Double = 1, toPagesAt indexes: [Int]? = nil) throws {
+        let pages = try pageIDs()
+        let targets = indexes ?? Array(pages.indices)
+        for index in targets where !pages.indices.contains(index) { throw SheafError.pageOutOfRange(index) }
+        let fill = "\(Serializer.format(color.red)) \(Serializer.format(color.green)) \(Serializer.format(color.blue)) rg"
+        // A unit square, stretched over each page when placed.
+        let form = add(.stream(PDFStream(
+            dictionary: [
+                "Type": .name("XObject"), "Subtype": .name("Form"), "BBox": [.integer(0), .integer(0), .integer(1), .integer(1)],
+                "Resources": ["ExtGState": ["GS0": Self.opacityState(opacity)]],
+            ],
+            data: Data("/GS0 gs \(fill) 0 0 1 1 re f\n".utf8)
+        )))
+        var wrappers = ContentWrappers()
+        for index in Set(targets).sorted() {
+            let geometry = try geometry(ofPageAt: index)
+            let page = geometry.displaySize
+            try addDrawing(toPage: pages[index], behind: true, wrappers: &wrappers) { resources in
+                let name = resources.add(xObject: form, prefix: "SheafBg")
+                let placement = Affine.scale(page.width, page.height).then(geometry.fromDisplay)
+                return Data("/Artifact <</Type /Pagination /Subtype /Background>> BDC\nq \(placement.operands) cm /\(name.rawValue) Do Q\nEMC\n".utf8)
+            }
         }
     }
 

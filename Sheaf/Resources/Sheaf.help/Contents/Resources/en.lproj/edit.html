@@ -14,34 +14,37 @@
 <h1>Change text and pictures</h1>
 <p class="lead">Edit what is on the page as you would in Pages.</p>
 
-<p>Click <span class="menu">Edit</span> in the toolbar, or press <kbd>⇧⌘E</kbd>. A thin frame appears around every piece of text and every picture.</p>
+<p>Take the editing tool (the second in the strip at the side of the pages), or press <kbd>⇧⌘E</kbd>. A thin frame appears around every piece of text and every picture.</p>
 <h2>Text</h2>
 <ul>
 <li><b>Change words</b>: double-click a paragraph and type. Click elsewhere or press <kbd>Esc</kbd> when done.</li>
 <li><b>Move</b>: click once and drag. Yellow guides show when it lines up with other things. Arrow keys nudge.</li>
 <li><b>Resize</b>: drag the handle on the left or right side of selected text, or of the editor while typing, to make its box narrower or wider. The words are fitted to the new width; the height follows from the lines.</li>
-<li><b>Restyle</b>: with text selected, the Format panel changes its font, size and color.</li>
+<li><b>Restyle</b>: with text selected, the options panel changes its font, size and color, makes it bold or italic, and under Paragraph sets its alignment (left, centered, right or justified), its line spacing and the space before each paragraph. A single line, such as a heading, is centered or set to the right within the page's column of text.</li>
 <li><b>Add</b>: choose the Text tool (Aa), click an empty spot and type.</li>
 <li><kbd>Tab</kbd> and <kbd>⇧Tab</kbd> move the selection from one piece of text to the next; <kbd>Return</kbd> starts typing in it.</li>
 </ul>
 <p>What you type uses the document's own font when it has the letters you need. When it does not, Sheaf uses the closest font installed on your Mac and puts it inside the file, so the result looks the same everywhere.</p>
 <p>Short lines one under the other, such as an address, are kept as separate lines when you edit them. Long lines of running text are treated as a paragraph that wraps.</p>
 <div class="note">A PDF has no flowing text the way a Pages document does. A paragraph re-wraps inside its own box; if it grows by a line, the paragraphs below it in the same block move down, but other things on the page stay where they are.</div>
-<p>Some text can be selected and copied but not changed: text that is turned, text that is part of an element repeated across pages, and text in fonts whose letters cannot be identified reliably. The Format panel says so when you select it.</p>
+<p>Some text can be selected and copied but not changed: text that is turned, text that is part of an element repeated across pages, and text in fonts whose letters cannot be identified reliably. The options panel says so when you select it.</p>
 <h2>Pictures</h2>
 <ul>
-<li>Click a picture to select it. Drag to move, drag a corner to resize in proportion, a side to stretch. Turn off <span class="menu">Constrain proportions</span> in the Format panel to resize a corner freely; <kbd>⇧</kbd> then keeps the shape.</li>
-<li><b>Turn</b>: hold <kbd>⌘</kbd> and drag any of the picture's handles. The angle shows next to the pointer. Hold <kbd>⇧</kbd> as well to turn in steps of 45°, or type an angle in the Format panel.</li>
-<li><b>Flip</b> it left to right or top to bottom with the buttons in the Format panel, or <span class="menu">Arrange ▸ Flip Horizontally</span>.</li>
+<li>Click a picture to select it. Drag to move, drag a corner to resize in proportion, a side to stretch. Turn off <span class="menu">Constrain proportions</span> in the options panel to resize a corner freely; <kbd>⇧</kbd> then keeps the shape.</li>
+<li><b>Turn</b>: hold <kbd>⌘</kbd> and drag any of the picture's handles. The angle shows next to the pointer. Hold <kbd>⇧</kbd> as well to turn in steps of 45°. In the options panel, drag the Rotate knob, type an angle, or click Rotate Left or Rotate Right for a quarter turn; those two are also in the right-click menu and the Arrange menu.</li>
+<li><b>Flip</b> it left to right or top to bottom with the buttons in the options panel, or <span class="menu">Arrange ▸ Flip Horizontally</span>.</li>
 <li><b>Mask</b>: double-click a picture, or choose <span class="menu">Edit Mask</span>, to pick the part of it that shows. Drag the handles, or drag inside to slide the part over the picture, then press <kbd>Return</kbd>. The whole picture stays in the file; <span class="menu">Reset Mask</span> shows all of it again.</li>
-<li><b>Opacity</b>: the slider in the Format panel lets what is behind the picture show through.</li>
+<li><b>Opacity</b>: the slider in the options panel lets what is behind the picture show through.</li>
+<li><b>Adjustments</b>, in the options panel as in Pages: Exposure, Saturation and Enhance, and under More Adjustments Contrast, Highlights, Shadows, Sharpness, Temperature and Tint. Each change starts from the picture as it was when you selected it, so you can go back and forth; Reset Adjustments returns to it, and Undo takes back each change.</li>
 <li><b>Remove Background</b> keeps what the picture is of and makes the rest see-through. It works on photos with a clear subject.</li>
-<li><b>Add</b>: the Picture tool, <span class="menu">Edit ▸ Insert ▸ Picture…</span>, paste with <kbd>⌘V</kbd>, or drag a picture file onto the page.</li>
-<li><b>Replace</b> and <b>Delete</b> are in the Format panel and the right-click menu.</li>
+<li><b>Auto Crop</b> masks the picture down to the part that matters. It is a mask like any other, so <span class="menu">Edit Mask</span> and <span class="menu">Reset Mask</span> work on it.</li>
+<li><b>Super Resolution</b> gives a small or blurry picture four times the pixels and sharpens it, in the same place on the page. See <a href="intelligence.html">Apple Intelligence</a>.</li>
+<li><b>Add</b>: the Picture tool, <span class="menu">Edit ▸ Insert ▸ Picture…</span>, paste with <kbd>⌘V</kbd>, or drag a picture file onto the page. <span class="menu">Edit ▸ Insert ▸ Image Playground…</span> makes a new one from a description.</li>
+<li><b>Replace</b> and <b>Delete</b> are in the options panel and the right-click menu.</li>
 </ul>
 <h2>Arranging text and pictures</h2>
 <ul>
-<li><b>In front and behind</b>: things on a page cover what was drawn before them. <span class="menu">Arrange ▸ Bring to Front</span> <kbd>⇧⌘F</kbd>, <span class="menu">Arrange ▸ Send to Back</span> <kbd>⇧⌘B</kbd>, and Bring Forward <kbd>⌥⇧⌘F</kbd> and Send Backward <kbd>⌥⇧⌘B</kbd> for one step, move the selection past what overlaps it. The same commands are in the Format panel and the right-click menu. They are dimmed when nothing lies over or under the selection.</li>
+<li><b>In front and behind</b>: things on a page cover what was drawn before them. <span class="menu">Arrange ▸ Bring to Front</span> <kbd>⇧⌘F</kbd>, <span class="menu">Arrange ▸ Send to Back</span> <kbd>⇧⌘B</kbd>, and Bring Forward <kbd>⌥⇧⌘F</kbd> and Send Backward <kbd>⌥⇧⌘B</kbd> for one step, move the selection past what overlaps it. The same commands are in the options panel and the right-click menu. They are dimmed when nothing lies over or under the selection.</li>
 <li><b>Align on Page</b> lines the selection up with an edge or the middle of the page.</li>
 <li><b>Cut</b>, <b>Copy</b> and <b>Paste</b> work on a selected picture or block of text. <b>Duplicate</b> <kbd>⌘D</kbd> makes a copy next to it; a copied picture uses the same image, so the file hardly grows.</li>
 <li><b>Add Link…</b> puts a link over the selection and opens the markup tools, where you set where it goes.</li>

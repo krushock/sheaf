@@ -1,4 +1,5 @@
 import AppKit
+import ImagePlayground
 import PDFKit
 import SheafKit
 import SwiftUI
@@ -64,7 +65,41 @@ final class ViewerModel: NSObject {
         }
     }
 
-    var isInspectorVisible = false
+    /// Whether the Format panel is showing. It shares its place with the Summary panel.
+    var isInspectorVisible = false {
+        didSet { if isInspectorVisible { isAssistantVisible = false } }
+    }
+
+    /// Whether the Summary panel is showing, where Apple Intelligence sums the document up.
+    var isAssistantVisible = false {
+        didSet { if isAssistantVisible { isInspectorVisible = false } }
+    }
+
+    /// The kind of text marking and the shape the strip's buttons take up next.
+    var lastTextMarkTool = MarkupTool.highlight
+    var lastShapeTool = MarkupTool.rectangle
+    /// The strip's Sign and Stamp tool is in hand: its panel shows signatures and stamps.
+    var isSignPanelShown = false
+    /// The strip of tools stands at the left edge of the pages; it is remembered.
+    var toolsOnLeft = UserDefaults.standard.bool(forKey: "tools.onLeft") {
+        didSet { UserDefaults.standard.set(toolsOnLeft, forKey: "tools.onLeft") }
+    }
+
+    /// What the Summary panel has made of this document.
+    let assistant = AssistantModel()
+
+    /// What is being done to the selected picture that takes a moment, if anything.
+    var pictureWork: PictureWork?
+    /// The selected picture's adjustments and how it was before them.
+    @ObservationIgnored var adjustmentSession: AdjustmentSession?
+    /// What Apple Intelligence said a picture shows, kept while that picture is selected.
+    var pictureDescription: PictureDescription?
+    /// Whether the question about downloading the Super Resolution model is showing.
+    var isSuperResolutionDownloadPresented = false
+    /// Whether Image Playground is open, and what it starts from.
+    var isImagePlaygroundPresented = false
+    @ObservationIgnored var playgroundConcepts: [ImagePlaygroundConcept] = []
+    @ObservationIgnored var playgroundSource: Image?
     var isFlattenConfirmationPresented = false
     var isSignaturePickerPresented = false
     var isSignatureCreatorPresented = false
@@ -117,6 +152,9 @@ final class ViewerModel: NSObject {
 
     /// The tool sheet showing on the window, if any.
     var activeSheet: ToolSheet?
+
+    /// Reads the document aloud.
+    let pageReader = PageReader()
 
     // MARK: Form state
 

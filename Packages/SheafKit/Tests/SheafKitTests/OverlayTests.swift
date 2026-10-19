@@ -174,4 +174,98 @@ import Testing
         try editor.addWatermark(Watermark(content: .text("")))
         #expect(!editor.hasChanges)
     }
+
+    // MARK: Bates numbers and backgrounds
+
+    @Test func batesNumbersCountTheMarkedPages() throws {
+        var spec = HeaderFooter()
+        spec.batesPrefix = "ACME-"
+        spec.batesStart = 41
+        spec.batesDigits = 5
+        #expect(spec.batesNumber(at: 0) == "ACME-00041")
+        #expect(spec.batesNumber(at: 1) == "ACME-00042")
+        spec.batesDigits = 1
+        #expect(spec.batesNumber(at: 0) == "ACME-41")
+        spec.footer.right = HeaderFooter.batesToken
+        var editor = try blankPage()
+        try editor.addHeaderFooter(spec)
+        let picture = try Picture(Reference(try editor.serialized()), page: 0)
+        #expect(picture.share(x: 0.5...1, y: 0.7...1, where: Picture.isDark) > 0.005)
+    }
+
+    @Test(arguments: [0, 90])
+    func aBackgroundFillsThePageBehindItsDrawing(rotation: Int) throws {
+        // A black square in the middle of the page.
+        var editor = try blankPage(rotation: rotation, content: "0 g 200 110 60 60 re f")
+        try editor.addBackground(PDFColor(red: 1, green: 0, blue: 0), toPagesAt: [0])
+        let picture = try Picture(Reference(try editor.serialized()), page: 0)
+        #expect(picture.share(x: 0...0.2, y: 0...0.2, where: Picture.isRed) > 0.95)
+        #expect(picture.share(where: Picture.isDark) > 0.01)
+    }
+
+    // MARK: Hidden information
+
+    @Test func hiddenInformationIsFoundAndRemoved() throws {
+        var editor = PDFEditor(try PDFFile(data: Fixture.outlineAnnotations.data))
+        let catalogID = try #require(editor.catalogID)
+        let file = editor.add(.stream(PDFStream(dictionary: ["Type": .name("EmbeddedFile")], data: Data("secret".utf8))))
+        let script = editor.add(["S": .name("JavaScript"), "JS": .string(Data("app.alert(1)".utf8))])
+        try editor.update(catalogID) { catalog in
+            catalog["Names"] = [
+                "EmbeddedFiles": ["Names": [.string(Data("a.txt".utf8)), ["Type": .name("Filespec"), "EF": ["F": .reference(file)]]]],
+                "JavaScript": ["Names": [.string(Data("hello".utf8)), .reference(script)]],
+            ]
+            catalog["OpenAction"] = .reference(script)
+        }
+        editor.setTrailer("Info", ["Author": .string(Data("Someone".utf8))])
+        let links = try editor.pageIDs().map { page in
+            try (editor.value("Annots", in: try editor.object(page).dictionaryValue ?? [:]).arrayValue ?? [])
+                .filter { try editor.resolve($0).dictionaryValue?["Subtype"]?.nameValue == "Link" }.count
+        }.reduce(0, +)
+
+        let found = try editor.hiddenInformation()
+        #expect(found[.attachments] == 1)
+        #expect((found[.scripts] ?? 0) >= 2)
+        #expect(found[.metadata] != nil)
+        #expect(found[.bookmarks] != nil)
+        #expect(found[.comments] != nil)
+
+        try editor.removeHiddenInformation(Set(HiddenInformation.allCases))
+        let saved = try editor.rewritten()
+        let reopened = PDFEditor(try PDFFile(data: saved))
+        #expect(try reopened.hiddenInformation().isEmpty)
+        #expect(!String(decoding: saved, as: UTF8.self).contains("app.alert"))
+        // Links are not hidden information: they stay.
+        let linksAfter = try reopened.pageIDs().map { page in
+            try (reopened.value("Annots", in: try reopened.object(page).dictionaryValue ?? [:]).arrayValue ?? [])
+                .filter { try reopened.resolve($0).dictionaryValue?["Subtype"]?.nameValue == "Link" }.count
+        }.reduce(0, +)
+        #expect(linksAfter == links)
+        #expect(try reopened.pageCount() == 12)
+    }
+
+    @Test func onlyTheChosenKindsAreRemoved() throws {
+        var editor = PDFEditor(try PDFFile(data: Fixture.outlineAnnotations.data))
+        let before = try editor.hiddenInformation()
+        try editor.removeHiddenInformation([.comments])
+        let after = try editor.hiddenInformation()
+        #expect(after[.comments] == nil)
+        #expect(after[.bookmarks] == before[.bookmarks])
+    }
+
+    // MARK: Cropping
+
+    @Test(arguments: [0, 90, 180, 270])
+    func cropMarginsFollowThePageAsDisplayed(rotation: Int) throws {
+        var editor = try blankPage(rotation: rotation)
+        try editor.cropPage(at: 0, top: 10, left: 20, bottom: 30, right: 40)
+        let geometry = try editor.geometry(ofPageAt: 0)
+        let before = try blankPage(rotation: rotation).geometry(ofPageAt: 0)
+        #expect(abs(geometry.displaySize.width - (before.displaySize.width - 60)) < 0.001)
+        #expect(abs(geometry.displaySize.height - (before.displaySize.height - 40)) < 0.001)
+        // What was 20 in from the left and 30 up from the bottom is now the bottom left corner.
+        let corner = before.pagePoint(PDFPoint(x: 20, y: 30))
+        let now = geometry.displayPoint(corner)
+        #expect(abs(now.x) < 0.001 && abs(now.y) < 0.001)
+    }
 }

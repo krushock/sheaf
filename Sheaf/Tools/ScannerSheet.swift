@@ -103,6 +103,11 @@ private struct ScannerPanel: NSViewRepresentable {
             try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         }
 
+        deinit {
+            // The scanned pages are in the document by now, or were not wanted.
+            try? FileManager.default.removeItem(at: folder)
+        }
+
         func deviceBrowserView(_ deviceBrowserView: IKDeviceBrowserView!, selectionDidChange device: ICDevice!) {
             scanner?.scannerDevice = device as? ICScannerDevice
             onSelection(device is ICScannerDevice)

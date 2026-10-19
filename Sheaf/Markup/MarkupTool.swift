@@ -58,6 +58,24 @@ enum MarkupTool: String, CaseIterable, Identifiable {
         textMarkupKind != nil || self == .draw
     }
 
+    /// The tool's name as text, for labels drawn by hand.
+    var name: String {
+        switch self {
+        case .select: String(localized: "Select")
+        case .highlight: String(localized: "Highlight")
+        case .underline: String(localized: "Underline")
+        case .strikeOut: String(localized: "Strikethrough")
+        case .note: String(localized: "Note")
+        case .text: String(localized: "Text")
+        case .rectangle: String(localized: "Rectangle")
+        case .ellipse: String(localized: "Ellipse")
+        case .line: String(localized: "Line")
+        case .arrow: String(localized: "Arrow")
+        case .draw: String(localized: "Draw")
+        case .link: String(localized: "Link")
+        }
+    }
+
     static let shapes: [MarkupTool] = [.rectangle, .ellipse, .line, .arrow]
     static let textMarks: [MarkupTool] = [.highlight, .underline, .strikeOut]
 }

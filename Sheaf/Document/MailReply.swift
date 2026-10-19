@@ -254,6 +254,9 @@ enum MailReply {
             return
         }
         defer {
+            // Mail takes in the draft and the attachment as it opens them; the copies here
+            // hold the PDF and the whole email, so they go once Mail has had them.
+            TemporaryFiles.remove(folder, after: 300)
             if let document = viewer.window?.windowController?.document as? NSDocument {
                 objc_setAssociatedObject(document, &sentKey, NSNumber(value: viewer.sheafDocument?.revision ?? 0), .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
             }

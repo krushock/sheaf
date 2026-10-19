@@ -29,14 +29,41 @@ struct TextBlockInspector: View {
                         }
                     }
                     ColorPicker("Color", selection: color, supportsOpacity: false)
+                    LabeledContent("Style") {
+                        ControlGroup {
+                            Toggle("Bold", systemImage: "bold", isOn: style(bold: true))
+                                .help("Bold")
+                            Toggle("Italic", systemImage: "italic", isOn: style(bold: false))
+                                .help("Italic")
+                        }
+                        .labelStyle(.iconOnly)
+                        .fixedSize()
+                    }
+                }
+                Section("Paragraph") {
+                    LabeledContent("Alignment") {
+                        Picker("Alignment", selection: alignment) {
+                            ForEach(Self.alignments, id: \.self) { alignment in
+                                Label(Self.title(alignment), systemImage: Self.symbol(alignment)).tag(alignment)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelStyle(.iconOnly)
+                        .labelsHidden()
+                        .fixedSize()
+                    }
+                    if block.lines.count > 1 {
+                        spacingRow("Line Spacing", value: leading, range: lineSpacingRange)
+                        spacingRow("Before Paragraph", value: paragraphGap, range: 0...max(lineSpacingRange.upperBound - block.leading, 0.5))
+                    }
                 }
                 Section("Arrange") {
                     ArrangeControls(viewer: viewer)
                 }
                 Section {
-                    Button("Edit Text") { viewer.beginEditing(block, pageIndex: pageIndex) }
-                    Button("Duplicate") { viewer.duplicateContentSelection() }
-                    Button("Delete", role: .destructive) { viewer.deleteContentSelection() }
+                    ActionRow("Edit Text", systemImage: "character.cursor.ibeam") { viewer.beginEditing(block, pageIndex: pageIndex) }
+                    ActionRow("Duplicate", systemImage: "plus.square.on.square") { viewer.duplicateContentSelection() }
+                    ActionRow("Delete", systemImage: "trash", role: .destructive) { viewer.deleteContentSelection() }
                 } footer: {
                     Text("Double-click the text to type in it. What you type uses the document's own font where it has the letters, and the closest installed font where it does not.")
                         .font(.callout)
@@ -83,6 +110,106 @@ struct TextBlockInspector: View {
                 viewer.restyleSelectedBlock(String(localized: "Change Text Size"), coalescing: "text-size", TextRestyle(fontSize: size))
             }
         )
+    }
+
+    private static let alignments: [TextBlock.Alignment] = [.left, .center, .right, .justified]
+
+    private static func title(_ alignment: TextBlock.Alignment) -> String {
+        switch alignment {
+        case .left: String(localized: "Align Left")
+        case .center: String(localized: "Center")
+        case .right: String(localized: "Align Right")
+        case .justified: String(localized: "Justify")
+        }
+    }
+
+    private static func symbol(_ alignment: TextBlock.Alignment) -> String {
+        switch alignment {
+        case .left: "text.alignleft"
+        case .center: "text.aligncenter"
+        case .right: "text.alignright"
+        case .justified: "text.justify"
+        }
+    }
+
+    /// How the block's lines sit. A single line says nothing by itself, so it is read
+    /// against the page's column, the box Center and Align Right put it in.
+    private var shownAlignment: TextBlock.Alignment {
+        guard block.lines.count == 1, let column = viewer.content(ofPage: pageIndex)?.column else { return block.alignment }
+        let right = block.frame.x + block.frame.width
+        if block.frame.x > column.left + 1, abs(block.frame.x + block.frame.width / 2 - (column.left + column.right) / 2) < 1.5 { return .center }
+        if block.frame.x > column.left + 1, abs(right - column.right) < 1.5 { return .right }
+        return .left
+    }
+
+    private var alignment: Binding<TextBlock.Alignment> {
+        Binding(
+            get: { shownAlignment },
+            set: { alignment in
+                guard alignment != shownAlignment else { return }
+                viewer.restyleSelectedBlock(String(localized: "Change Alignment"), TextRestyle(alignment: alignment))
+            }
+        )
+    }
+
+    /// Whether most of the block's letters are bold, or italic.
+    private func isStyled(bold: Bool) -> Bool {
+        let glyphs = block.lines.flatMap(\.glyphs).filter { !$0.text.allSatisfy(\.isWhitespace) }
+        return glyphs.filter { bold ? $0.isBold : $0.isItalic }.count * 2 > glyphs.count
+    }
+
+    private func style(bold: Bool) -> Binding<Bool> {
+        Binding(
+            get: { isStyled(bold: bold) },
+            set: { on in
+                viewer.restyleSelectedBlock(
+                    bold ? String(localized: "Change to Bold") : String(localized: "Change to Italic"),
+                    bold ? TextRestyle(isBold: on) : TextRestyle(isItalic: on)
+                )
+            }
+        )
+    }
+
+    /// Lines further apart than this no longer read as one paragraph, on the page or to Sheaf.
+    private var lineSpacingRange: ClosedRange<Double> {
+        let size = block.fontSize
+        return (size * 0.8).rounded()...max((size * 1.7).rounded(.down), (size * 0.8).rounded() + 1)
+    }
+
+    private var leading: Binding<Double> {
+        Binding(
+            get: { (block.leading * 2).rounded() / 2 },
+            set: { value in
+                let value = min(max(value, lineSpacingRange.lowerBound), lineSpacingRange.upperBound)
+                guard abs(value - block.leading) > 0.05 else { return }
+                viewer.restyleSelectedBlock(String(localized: "Change Line Spacing"), coalescing: "line-spacing", TextRestyle(leading: value))
+            }
+        )
+    }
+
+    private var paragraphGap: Binding<Double> {
+        Binding(
+            get: { (block.paragraphGap * 2).rounded() / 2 },
+            set: { value in
+                let value = max(value, 0)
+                guard abs(value - block.paragraphGap) > 0.05 else { return }
+                viewer.restyleSelectedBlock(String(localized: "Change Paragraph Spacing"), coalescing: "paragraph-spacing", TextRestyle(paragraphGap: value))
+            }
+        )
+    }
+
+    private func spacingRow(_ title: LocalizedStringKey, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
+        LabeledContent(title) {
+            HStack(spacing: 6) {
+                TextField(title, value: value, format: .number.precision(.fractionLength(0...1)))
+                    .labelsHidden()
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 52)
+                Stepper(title, value: value, in: range, step: 0.5)
+                    .labelsHidden()
+                Text("pt").foregroundStyle(.secondary)
+            }
+        }
     }
 
     private var color: Binding<Color> {
@@ -145,11 +272,14 @@ struct PictureInspector: View {
                 picture
                 if image.isEditable {
                     arrange
+                    PictureAdjustmentControls(viewer: viewer)
+                    description
                     Section {
-                        Button("Duplicate") { viewer.duplicateContentSelection() }
-                        Button("Delete", role: .destructive) { viewer.deleteContentSelection() }
+                        ActionRow("Duplicate", systemImage: "plus.square.on.square") { viewer.duplicateContentSelection() }
+                        ActionRow("Delete", systemImage: "trash", role: .destructive) { viewer.deleteContentSelection() }
                     }
                 } else {
+                    description
                     Section {
                     } footer: {
                         Text("This picture is slanted or is part of a repeated element, so it cannot be changed here.")
@@ -167,9 +297,9 @@ struct PictureInspector: View {
     /// Shown while the mask is being changed.
     @ViewBuilder private var mask: some View {
         Section {
-            Button("Done") { viewer.endMaskEditing(commit: true) }
-            Button("Reset Mask") { viewer.resetMask() }
-            Button("Cancel") { viewer.endMaskEditing(commit: false) }
+            ActionRow("Done", systemImage: "checkmark") { viewer.endMaskEditing(commit: true) }
+            ActionRow("Reset Mask", systemImage: "arrow.counterclockwise") { viewer.resetMask() }
+            ActionRow("Cancel", systemImage: "xmark") { viewer.endMaskEditing(commit: false) }
         } header: {
             Text("Mask")
         } footer: {
@@ -205,21 +335,59 @@ struct PictureInspector: View {
         }
         if image.isEditable {
             Section {
-                Button("Replace…") { viewer.chooseReplacementPicture() }
-                Button("Edit Mask") { viewer.beginMaskEditing() }
+                ActionRow("Replace…", systemImage: "photo.on.rectangle") { viewer.chooseReplacementPicture() }
+                ActionRow("Edit Mask", systemImage: "crop") { viewer.beginMaskEditing() }
                 if image.shownPart != nil {
-                    Button("Reset Mask") { viewer.resetMask() }
+                    ActionRow("Reset Mask", systemImage: "arrow.counterclockwise") { viewer.resetMask() }
                 }
-                HStack {
-                    Button("Remove Background") { viewer.removeBackgroundOfSelectedPicture() }
-                        .disabled(viewer.isRemovingBackground)
-                    if viewer.isRemovingBackground {
-                        Spacer()
-                        ProgressView().controlSize(.small)
+                ActionRow("Remove Background", systemImage: "person.and.background.dotted", isWorking: viewer.isRemovingBackground) { viewer.removeBackgroundOfSelectedPicture() }
+                    .disabled(viewer.isRemovingBackground)
+                working("Auto Crop", systemImage: "viewfinder", while: .cropping) { viewer.autoCropSelectedPicture() }
+                    .help("Mask the picture down to the part that matters")
+                if viewer.offersSuperResolution {
+                    ActionRow("Super Resolution", systemImage: "arrow.up.left.and.arrow.down.right", isWorking: viewer.pictureWork == .enlarging) { viewer.enlargeSelectedPicture() }
+                        .disabled(viewer.pictureWork != nil)
+                        .help("Give the picture four times the pixels, sharper, in the same place")
+                    if case .downloading(let fraction) = viewer.pictureWork {
+                        ProgressView(value: fraction)
                     }
                 }
             }
         }
+    }
+
+    /// What Apple Intelligence says the picture shows, once asked.
+    @ViewBuilder private var description: some View {
+        if viewer.canDescribePictures {
+            Section("Description") {
+                if let description = viewer.selectedPictureDescription {
+                    Text(description)
+                        .textSelection(.enabled)
+                        .font(.callout)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    HStack(spacing: 14) {
+                        Button("Copy", systemImage: "doc.on.doc") {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(description, forType: .string)
+                        }
+                        .help("Copy the description")
+                        Button("Add as Note", systemImage: "note.text.badge.plus") { viewer.addNote(with: description, heading: String(localized: "Picture description by Apple Intelligence")) }
+                            .help("Put the description on this page as a note")
+                        Spacer()
+                    }
+                    .buttonStyle(.borderless)
+                    .labelStyle(.iconOnly)
+                }
+                working(viewer.selectedPictureDescription == nil ? "Describe" : "Describe Again", systemImage: "text.below.photo", while: .describing) { viewer.describeSelectedPicture() }
+                    .help("Have Apple Intelligence say what the picture shows")
+            }
+        }
+    }
+
+    /// A button for something that takes a moment, with a spinner beside it while it runs.
+    private func working(_ title: LocalizedStringKey, systemImage: String, while work: PictureWork, action: @escaping () -> Void) -> some View {
+        ActionRow(title, systemImage: systemImage, isWorking: viewer.pictureWork == work, action: action)
+            .disabled(viewer.pictureWork != nil)
     }
 
     @ViewBuilder private var arrange: some View {
@@ -241,10 +409,19 @@ struct PictureInspector: View {
                     Text("pt").foregroundStyle(.secondary)
                 }
             }
-            LabeledContent("Angle") {
+            LabeledContent("Rotate") {
                 HStack(spacing: 6) {
+                    RotationKnob(angle: image.placement.rotation) { viewer.setSelectedPictureAngle($0) }
                     measure("Angle", .angle)
                     Text(verbatim: "°").foregroundStyle(.secondary)
+                    ControlGroup {
+                        Button("Rotate Left", systemImage: "rotate.left") { viewer.rotateSelectedPicture(by: 90) }
+                            .help("Rotate Left")
+                        Button("Rotate Right", systemImage: "rotate.right") { viewer.rotateSelectedPicture(by: -90) }
+                            .help("Rotate Right")
+                    }
+                    .labelStyle(.iconOnly)
+                    .fixedSize()
                 }
             }
             LabeledContent("Flip") {

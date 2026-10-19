@@ -24,6 +24,10 @@ struct SheafCommands: Commands {
                     Button("Word…") { viewer?.activeSheet = .exportWord }
                     Button("Excel…") { viewer?.activeSheet = .exportExcel }
                     Button("PDF/A…") { viewer?.activeSheet = .exportArchival }
+                    Divider()
+                    Button("Rich Text…") { viewer?.activeSheet = .exportRichText }
+                    Button("Web Page…") { viewer?.activeSheet = .exportWebPage }
+                    Button("Plain Text…") { viewer?.activeSheet = .exportText }
                 }
                 Button("Export as Images…") { viewer?.activeSheet = .exportImages }
                 Button("Split into Documents…") { viewer?.activeSheet = .split }
@@ -69,8 +73,13 @@ struct SheafCommands: Commands {
                     viewer?.editTool = .text
                 }
                 Button("Picture…") { viewer?.choosePictureToAdd() }
+                // As in Pages: a picture made on this Mac from a description, or from the
+                // text or picture that is selected.
+                Button("Image Playground…", systemImage: "apple.image.playground") { viewer?.openImagePlayground() }
+                    .disabled(viewer?.offersImagePlayground != true)
             }
             .disabled(viewer?.canEditPages != true)
+            WritingToolsMenu()
             // Command-D does this while text or a picture is selected; see SheafPDFView.
             Button("Duplicate") { viewer?.duplicateContentSelection() }
                 .disabled(viewer?.canArrangeContent != true)
@@ -130,10 +139,15 @@ struct SheafCommands: Commands {
             .disabled(viewer == nil)
         }
 
-        // The Format panel is Sheaf's own column, so the command that shows it is too.
+        // The options panel beside the tools, and the Summary column.
         CommandGroup(before: .sidebar) {
-            Button(viewer?.isInspectorVisible == true ? "Hide Inspector" : "Show Inspector") { viewer?.isInspectorVisible.toggle() }
+            Button(viewer?.isInspectorVisible == true ? "Hide Options" : "Show Options") { withAnimation(.easeOut(duration: 0.15)) { viewer?.isInspectorVisible.toggle() } }
                 .keyboardShortcut("i", modifiers: [.command, .control])
+                .disabled(viewer == nil)
+            Button(viewer?.isAssistantVisible == true ? "Hide Summary" : "Show Summary") { viewer?.isAssistantVisible.toggle() }
+                .keyboardShortcut("u", modifiers: [.command, .control])
+                .disabled(viewer == nil)
+            Button(viewer?.isReadingAloud == true ? "Stop Reading Out Loud" : "Read Out Loud") { viewer?.toggleReadingAloud() }
                 .disabled(viewer == nil)
         }
         ImportFromDevicesCommands()
@@ -166,6 +180,10 @@ struct SheafCommands: Commands {
 
             Divider()
 
+            Button("Rotate Left") { viewer?.rotateSelectedPicture(by: 90) }
+                .disabled(viewer?.canArrangeContent != true || viewer?.selectedImage == nil)
+            Button("Rotate Right") { viewer?.rotateSelectedPicture(by: -90) }
+                .disabled(viewer?.canArrangeContent != true || viewer?.selectedImage == nil)
             Button("Flip Horizontally") { viewer?.flipSelectedPicture(horizontally: true) }
                 .disabled(viewer?.canArrangeContent != true || viewer?.selectedImage == nil)
             Button("Flip Vertically") { viewer?.flipSelectedPicture(horizontally: false) }
@@ -177,14 +195,21 @@ struct SheafCommands: Commands {
                 .disabled(viewer?.canArrangeContent != true || viewer?.selectedImage == nil)
             Button("Reset Mask") { viewer?.resetMask() }
                 .disabled(viewer?.selectedImage?.shownPart == nil && viewer?.maskEdit == nil)
+            Button("Auto Crop") { viewer?.autoCropSelectedPicture() }
+                .disabled(viewer?.canArrangeContent != true || viewer?.selectedImage?.isEditable != true || viewer?.pictureWork != nil)
         }
 
         CommandMenu("Tools") {
+            // Reading a document changes nothing in it, so these work on a locked one too.
+            Button("Summarize", systemImage: "apple.intelligence") { viewer?.summarizeDocument() }
+                .disabled(viewer == nil)
+            Divider()
             Group {
-                Toggle("Show Markup Toolbar", isOn: binding(false) { $0.isMarkupVisible } set: { $0.isMarkupVisible = $1 })
+                // The tools of the strip at the side of the pages.
+                Toggle("Select", isOn: binding(false) { $0.hand == .pointer } set: { viewer, _ in viewer.take(.pointer) })
                     .keyboardShortcut("a", modifiers: [.command, .shift])
 
-                Toggle("Show Edit Toolbar", isOn: binding(false) { $0.isContentEditing } set: { $0.isContentEditing = $1 })
+                Toggle("Edit Text and Pictures", isOn: binding(false) { $0.hand == .edit } set: { viewer, on in viewer.take(on ? .edit : .pointer) })
                     .keyboardShortcut("e", modifiers: [.command, .shift])
 
                 Menu("Annotate") {
@@ -216,7 +241,7 @@ struct SheafCommands: Commands {
 
                 Menu("Form") {
                     // Shift-Command-F is Bring to Front, as in Pages.
-                    Toggle("Show Form Toolbar", isOn: binding(false) { $0.isFormEditing } set: { $0.isFormEditing = $1 })
+                    Toggle("Edit Form Fields", isOn: binding(false) { $0.hand == .form } set: { viewer, on in viewer.take(on ? .form : .pointer) })
                         .keyboardShortcut("m", modifiers: [.command, .shift])
                     Menu("Add Field") {
                         ForEach(FormTool.allCases) { tool in
@@ -301,6 +326,13 @@ struct SheafCommands: Commands {
 
                 Button("Watermark…") { viewer?.activeSheet = .watermark }
                 Button("Header and Footer…") { viewer?.activeSheet = .headerFooter }
+                Button("Bates Numbering…") { viewer?.activeSheet = .bates }
+                Button("Background…") { viewer?.activeSheet = .background }
+                Button("Crop Pages…") { viewer?.activeSheet = .cropPages }
+
+                Divider()
+
+                Button("Remove Hidden Information…") { viewer?.activeSheet = .hiddenInformation }
             }
             .disabled(viewer?.sheafDocument?.isEditable != true)
         }
@@ -361,5 +393,34 @@ struct SheafCommands: Commands {
             get: { viewer.map(get) ?? fallback },
             set: { value in if let viewer { set(viewer, value) } }
         )
+    }
+}
+
+/// Edit > Writing Tools, as other apps have it: the system's own list, which works on the
+/// text being edited and on text selected on a page. The items are AppKit's, with their
+/// own names in the person's language; each is sent down the responder chain as it is.
+private struct WritingToolsMenu: View {
+    var body: some View {
+        if let menu = NSMenuItem.writingToolsItems.first, let items = menu.submenu?.items {
+            Menu {
+                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                    if item.isSeparatorItem {
+                        Divider()
+                    } else {
+                        Button {
+                            NSApp.sendAction(#selector(NSResponder.showWritingTools(_:)), to: nil, from: item)
+                        } label: {
+                            Text(verbatim: item.title)
+                        }
+                    }
+                }
+            } label: {
+                Label {
+                    Text(verbatim: menu.title)
+                } icon: {
+                    Image(systemName: "apple.writing.tools")
+                }
+            }
+        }
     }
 }

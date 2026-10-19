@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 
 /// What a document can be turned into.
 enum ConversionKind: String, Identifiable {
-    case word, excel, archival
+    case word, excel, archival, text, richText, webPage
 
     var id: Self { self }
 
@@ -14,6 +14,9 @@ enum ConversionKind: String, Identifiable {
         case .word: "Export to Word"
         case .excel: "Export to Excel"
         case .archival: "Export as PDF/A"
+        case .text: "Export as Plain Text"
+        case .richText: "Export as Rich Text"
+        case .webPage: "Export as Web Page"
         }
     }
 
@@ -22,6 +25,9 @@ enum ConversionKind: String, Identifiable {
         case .word: "doc.richtext"
         case .excel: "tablecells"
         case .archival: "archivebox"
+        case .text: "doc.plaintext"
+        case .richText: "doc.richtext"
+        case .webPage: "globe"
         }
     }
 
@@ -33,6 +39,12 @@ enum ConversionKind: String, Identifiable {
             "Each page becomes a sheet. Text that lines up in rows and columns lands in rows and columns, and numbers become numbers. Pages of running text become one column."
         case .archival:
             "PDF/A-2b is a form of PDF for keeping documents for decades. Fonts are put inside the file, colors are given a profile, and scripts, attachments and passwords are taken out."
+        case .text:
+            "Just the words, in reading order, one paragraph to a line. Opens in any app."
+        case .richText:
+            "The text in paragraphs with its fonts, sizes and colors, for TextEdit, Pages and other word processors. Pictures are left out."
+        case .webPage:
+            "The text in paragraphs with its fonts, sizes and colors, as a page for a browser. Pictures are left out."
         }
     }
 
@@ -41,6 +53,9 @@ enum ConversionKind: String, Identifiable {
         case .word: "docx"
         case .excel: "xlsx"
         case .archival: "pdf"
+        case .text: "txt"
+        case .richText: "rtf"
+        case .webPage: "html"
         }
     }
 
@@ -216,16 +231,40 @@ struct ExportSheet: View {
                         continuation.yield(value)
                         return !stop.isSet
                     }
-                    return kind == .word ? try Toolbox.word(source, progress: progress) : try Toolbox.excel(source, progress: progress)
+                    return kind == .excel ? try Toolbox.excel(source, progress: progress) : try Toolbox.word(source, progress: progress)
                 }
             }
             for await value in updates { phase = .working(value) }
             switch await job.value {
-            case .success(let data): write(data, to: url)
+            case .success(let data):
+                do {
+                    write(try Self.reformatted(data, as: kind), to: url)
+                } catch {
+                    phase = .failed(error.localizedDescription)
+                }
             case .failure(let error):
                 if error is CancellationError { dismiss() } else { phase = .failed(error.localizedDescription) }
             }
         }
+    }
+
+    /// A Word document made by the converter, as the kind of file asked for. Plain text,
+    /// rich text and web pages are made from it, so they carry the paragraphs and styles
+    /// the converter worked out.
+    private static func reformatted(_ word: Data, as kind: ConversionKind) throws -> Data {
+        let documentType: NSAttributedString.DocumentType
+        switch kind {
+        case .text: documentType = .plain
+        case .richText: documentType = .rtf
+        case .webPage: documentType = .html
+        case .word, .excel, .archival: return word
+        }
+        let text = try NSAttributedString(data: word, options: [.documentType: NSAttributedString.DocumentType.officeOpenXML], documentAttributes: nil)
+        let whole = NSRange(location: 0, length: text.length)
+        if documentType == .plain { return Data(text.string.utf8) }
+        var attributes: [NSAttributedString.DocumentAttributeKey: Any] = [.documentType: documentType]
+        if documentType == .html { attributes[.characterEncoding] = String.Encoding.utf8.rawValue }
+        return try text.data(from: whole, documentAttributes: attributes)
     }
 
     private func chooseDestination() -> URL? {

@@ -91,6 +91,28 @@ enum XMP {
     ///
     /// - Parameter archival: Marks the document as following a part of the PDF/A
     ///   standard at a level of conformance, as `(2, "B")` for PDF/A-2b.
+    /// The metadata that marks a picture as made by a generative model, in the standard
+    /// way: IPTC's digital source type "trainedAlgorithmicMedia", with the tool that made it.
+    static func generatedImage(by tool: String) -> Data {
+        func escaped(_ text: String) -> String {
+            text.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;")
+        }
+        let packet = """
+        <?xpacket begin="\u{FEFF}" id="W5M0MpCehiHzreSzNTczkc9d"?>
+        <x:xmpmeta xmlns:x="adobe:ns:meta/">
+        <rdf:RDF xmlns:rdf="\(rdf)">
+        <rdf:Description rdf:about="" xmlns:Iptc4xmpExt="http://iptc.org/std/Iptc4xmpExt/2008-02-29/" xmlns:xmp="\(xmp)" xmlns:dc="\(dc)">
+        <Iptc4xmpExt:DigitalSourceType>http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia</Iptc4xmpExt:DigitalSourceType>
+        <xmp:CreatorTool>\(escaped(tool))</xmp:CreatorTool>
+        <dc:description><rdf:Alt><rdf:li xml:lang="x-default">Made with \(escaped(tool))</rdf:li></rdf:Alt></dc:description>
+        </rdf:Description>
+        </rdf:RDF>
+        </x:xmpmeta>
+        <?xpacket end="w"?>
+        """
+        return Data(packet.utf8)
+    }
+
     static func updated(_ existing: Data?, with info: DocumentInfo, archival: (part: Int, conformance: String)? = nil) -> Data {
         let document = existing.flatMap { try? XMLDocument(data: $0) }.flatMap { descriptions(in: $0).isEmpty ? nil : $0 } ?? fresh()
         let all = descriptions(in: document)

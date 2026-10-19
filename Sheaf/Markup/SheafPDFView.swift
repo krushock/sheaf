@@ -37,6 +37,8 @@ final class SheafPDFView: PDFView {
     /// Text on a page being typed in: a block that is there, or new text.
     private var contentSession: ContentSession?
 
+    nonisolated(unsafe) private static var keeperKey = 0
+
     private struct ContentSession {
         var view: NSTextView
         var pageIndex: Int
@@ -495,6 +497,8 @@ final class SheafPDFView: PDFView {
             add(String(localized: "Reset Mask"), #selector(resetPictureMask(_:)))
             add(String(localized: "Replace…"), #selector(replaceSelectedPicture(_:)))
             menu.addItem(.separator())
+            add(String(localized: "Rotate Left"), #selector(rotateContent(_:)), image: "rotate.left", tag: 90.0)
+            add(String(localized: "Rotate Right"), #selector(rotateContent(_:)), image: "rotate.right", tag: -90.0)
             add(String(localized: "Flip Horizontally"), #selector(flipContent(_:)), image: "arrow.left.and.right.righttriangle.left.righttriangle.right", tag: true)
             add(String(localized: "Flip Vertically"), #selector(flipContent(_:)), image: "arrow.up.and.down.righttriangle.up.righttriangle.down", tag: false)
             menu.addItem(.separator())
@@ -516,6 +520,10 @@ final class SheafPDFView: PDFView {
     @objc private func alignContent(_ sender: NSMenuItem) {
         guard let alignment = (sender.representedObject as? String).flatMap(PageAlignment.init(rawValue:)) else { return }
         viewer?.alignSelection(alignment)
+    }
+
+    @objc private func rotateContent(_ sender: NSMenuItem) {
+        viewer?.rotateSelectedPicture(by: sender.representedObject as? Double ?? 90)
     }
 
     @objc private func flipContent(_ sender: NSMenuItem) {
@@ -652,7 +660,9 @@ final class SheafPDFView: PDFView {
         else { return }
         let scale = scaleFactor
         let size = block.fontSize * scale
-        let font = NSFont(name: block.installedFontName, size: size) ?? .systemFont(ofSize: size)
+        // The document's own font where it can be used, so the text looks as it does on the page.
+        let fonts = EditorFont.font(for: block, size: size, editor: viewer.sheafDocument?.editor)
+        let font = fonts.primary
         let lineHeight = (block.leading * scale).rounded(.toNearestOrAwayFromZero)
         // The first baseline sits where the block's does: a line of fixed height puts
         // its baseline the font's descent above its bottom edge.
@@ -676,6 +686,13 @@ final class SheafPDFView: PDFView {
             alignment: alignment, lineHeight: lineHeight,
             firstIndent: block.indents.first * scale, restIndent: block.indents.rest * scale, paragraphSpacing: block.paragraphGap * scale
         )
+        // Words the document's font cannot draw are shown in the installed font whole, as
+        // the page will have them. The keeper lives as long as the editor.
+        if fonts.fallback != nil {
+            let keeper = WordFontKeeper(fonts: fonts)
+            textView.textStorage?.delegate = keeper
+            objc_setAssociatedObject(textView, &Self.keeperKey, keeper, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
         textView.string = block.flowingText
         // Covers the text on the page, which stays there until the change is made.
         textView.drawsBackground = true
@@ -979,6 +996,8 @@ extension SheafPDFView: NSTextViewDelegate {
     }
 
     func textDidEndEditing(_ notification: Notification) {
+        // Writing Tools works on the text from a panel of its own; the text stays open under it.
+        if let textView = notification.object as? NSTextView, textView.isWritingToolsActive { return }
         endTextEditing(commit: true)
         endContentEditing(commit: true)
     }
@@ -991,7 +1010,7 @@ extension SheafPDFView: NSMenuItemValidation {
         case #selector(delete(_:)): viewer?.contentSelection != nil || viewer?.selection != nil
         case #selector(copy(_:)): viewer?.canCopyContentSelection == true || currentSelection?.string?.isEmpty == false
         case #selector(cut(_:)): viewer?.canCutContentSelection == true
-        case #selector(duplicate(_:)), #selector(alignContent(_:)), #selector(flipContent(_:)): viewer?.canArrangeContent == true
+        case #selector(duplicate(_:)), #selector(alignContent(_:)), #selector(flipContent(_:)), #selector(rotateContent(_:)): viewer?.canArrangeContent == true
         case #selector(restackContent(_:)):
             (menuItem.representedObject as? String).flatMap(StackingMove.init(rawValue:)).map { viewer?.stackingMoves.contains($0) == true } ?? false
         case #selector(resetPictureMask(_:)): viewer?.selectedImage?.shownPart != nil || viewer?.maskEdit != nil

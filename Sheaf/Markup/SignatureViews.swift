@@ -51,7 +51,12 @@ struct SignaturePicker: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if store.signatures.isEmpty {
+            if let problem = store.problem {
+                Label(problem, systemImage: "exclamationmark.triangle")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if store.signatures.isEmpty {
                 Text("No signatures yet.")
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)

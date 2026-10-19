@@ -7,3 +7,13 @@ xcuserdata/
 # Generated from project.yml by `make project`
 /Sheaf.xcodeproj/
 __pycache__/
+# Never commit signing material or secrets
+*.p12
+*.cer
+*.certSigningRequest
+*.mobileprovision
+*.provisionprofile
+*.p8
+.env
+.env.*
+*.xcconfig.local

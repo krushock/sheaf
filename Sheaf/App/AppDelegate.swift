@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSUpdateDynamicServices()
         TitleBarDoubleClick.install()
         DefaultPDFApp.askOnceIfNeeded()
+        TemporaryFiles.sweep()
     }
 
     // Before any document is read: a file opened from Mail is noted as such while it is read.

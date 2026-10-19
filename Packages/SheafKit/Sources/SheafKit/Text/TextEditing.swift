@@ -124,14 +124,36 @@ public struct TextRestyle: Sendable, Equatable {
     /// sides of the box the text is set in. `nil` keeps the side the block has.
     public var left: Double?
     public var right: Double?
+    /// How the lines sit between the sides. `nil` keeps the block's own alignment.
+    public var alignment: TextBlock.Alignment?
+    /// From one baseline to the next, in points. `nil` keeps the block's spacing.
+    public var leading: Double?
+    /// The extra distance before a paragraph, in points. `nil` keeps the block's.
+    public var paragraphGap: Double?
+    /// Whether the text is set in the bold or the italic member of its font's family.
+    /// `nil` keeps each character as it is.
+    public var isBold: Bool?
+    public var isItalic: Bool?
 
-    public init(fontName: String? = nil, fontSize: Double? = nil, color: PDFColor? = nil, left: Double? = nil, right: Double? = nil) {
+    public init(
+        fontName: String? = nil, fontSize: Double? = nil, color: PDFColor? = nil, left: Double? = nil, right: Double? = nil,
+        alignment: TextBlock.Alignment? = nil, leading: Double? = nil, paragraphGap: Double? = nil, isBold: Bool? = nil, isItalic: Bool? = nil
+    ) {
         self.fontName = fontName
         self.fontSize = fontSize
         self.color = color
         self.left = left
         self.right = right
+        self.alignment = alignment
+        self.leading = leading
+        self.paragraphGap = paragraphGap
+        self.isBold = isBold
+        self.isItalic = isItalic
     }
+
+    /// Whether words have to be set again in an installed font, rather than kept or
+    /// written in the document's own.
+    var reshapes: Bool { fontName != nil || fontSize != nil || isBold != nil || isItalic != nil }
 }
 
 extension PDFEditor {
@@ -200,12 +222,63 @@ extension PDFEditor {
     /// font lacks is set in the closest installed font. From the first changed line on,
     /// words are fitted to the block's width again.
     public mutating func replaceText(ofBlock id: Int, onPageAt index: Int, with newText: String, restyle: TextRestyle = TextRestyle()) throws {
-        let (interpretation, _, block) = try editable(block: id, pageAt: index)
+        let (interpretation, content, block) = try editable(block: id, pageAt: index)
+        var restyle = restyle
+        let page = try pageIDs()[index]
+        let boxes = try textBoxes(onPage: page)
+        let top = block.frame.y + block.frame.height
+        // The box Sheaf set this block in before, if it did: the lines of a centered or
+        // right-aligned paragraph are narrower than their box, and do not say how wide it was.
+        let known = boxes.firstIndex { box in
+            abs(box.top - top) < 3 && box.left <= block.frame.x + 1 && box.right >= block.frame.x + block.frame.width - 1
+        }
+        if restyle.left == nil, restyle.right == nil {
+            if let known {
+                restyle.left = boxes[known].left
+                restyle.right = boxes[known].right
+            } else if block.lines.count == 1, restyle.alignment != nil {
+                // A single line has no width of its own to center or right-align it in. It
+                // takes the page's column instead.
+                restyle.left = content.column.left
+                restyle.right = content.column.right
+            }
+        }
         var emitter = TextEmitter(fontPrefix: fontPrefix(), in: self)
         guard let removed = try plan(replacing: block, with: newText, restyle: restyle, interpretation, emitter: &emitter) else { return }
         let addition = emitter.addition(in: &self)
         try rewritePage(at: index, interpretation, removing: removed, adding: addition)
+
+        // Remembered for the next time, when the box is not simply the lines' own.
+        var kept = boxes
+        if let known { kept.remove(at: known) }
+        let alignment = restyle.alignment ?? block.alignment
+        if restyle.left != nil || restyle.right != nil || alignment == .center || alignment == .right {
+            let left = restyle.left ?? block.frame.x
+            let right = restyle.right ?? content.rightLimit(of: block)
+            kept.append((left, right, top))
+        }
+        if known != nil || kept.count != boxes.count {
+            try setTextBoxes(kept, onPage: page)
+        }
     }
+
+    /// Where Sheaf set paragraphs of a page, as displayed: their sides, and the top of their first line.
+    private func textBoxes(onPage page: ObjectID) throws -> [(left: Double, right: Double, top: Double)] {
+        guard let dictionary = try object(page).dictionaryValue else { return [] }
+        return try (value(Self.textBoxesKey, in: dictionary).arrayValue ?? []).compactMap { entry in
+            guard let numbers = try resolve(entry).arrayValue?.compactMap(\.doubleValue), numbers.count == 3 else { return nil }
+            return (numbers[0], numbers[1], numbers[2])
+        }
+    }
+
+    private mutating func setTextBoxes(_ boxes: [(left: Double, right: Double, top: Double)], onPage page: ObjectID) throws {
+        try update(page) { dictionary in
+            dictionary[Self.textBoxesKey] = boxes.isEmpty ? nil : .array(boxes.map { [.real($0.left), .real($0.right), .real($0.top)] })
+        }
+    }
+
+    /// A page's own entry for the boxes, which other programs pass over.
+    static let textBoxesKey: PDFName = "SheafTextBoxes"
 
     /// Replaces the text of several blocks of one page at once, which reads and writes
     /// the page once however many blocks change.
@@ -284,6 +357,11 @@ extension PDFEditor {
         var firstLine = kept < old.count ? old[kept].line : block.lines.count - 1
         if kept > 0 { firstLine = min(firstLine, old[kept - 1].line) }
         if isRestyled { firstLine = 0 }
+        // Text written with codes the font has no glyphs for draws nothing. Its lines are
+        // set again, now in a font that shows it.
+        if let unseen = old.first(where: { item in item.glyph.map { !interpretation.fonts[$0.font].draws($0.code) } ?? false }) {
+            firstLine = min(firstLine, unseen.line)
+        }
         firstLine = max(min(firstLine, block.lines.count - 1), 0)
         let start = items.firstIndex { $0.line >= firstLine || $0.line == -1 } ?? items.count
 
@@ -350,11 +428,13 @@ extension PDFEditor {
         func finishWord() {
             guard !current.isEmpty else { return }
             defer { current = [] }
-            let identity = current.map { item in item.glyph.map { "\($0.source.operation)/\($0.index)" } ?? "+\(item.text)" }
+            // A word with glyphs that draw nothing is treated as newly typed, so that it shows.
+            let unseen = current.contains { item in item.glyph.map { !fonts[$0.font].draws($0.code) } ?? false }
+            let identity = current.map { item in item.glyph.map { unseen ? "+\(item.text)" : "\($0.source.operation)/\($0.index)" } ?? "+\(item.text)" }
             let space = words.isEmpty && !pendingBreak ? 0 : pendingSpace
             // A word nobody touched is drawn exactly as it was, kerning and all.
             let glyphs = current.compactMap(\.glyph)
-            if restyle.fontName == nil, restyle.fontSize == nil, glyphs.count == current.count, Set(current.map(\.line)).count == 1, let first = glyphs.first, let last = glyphs.last {
+            if !unseen, !restyle.reshapes, glyphs.count == current.count, Set(current.map(\.line)).count == 1, let first = glyphs.first, let last = glyphs.last {
                 var kept = glyphs
                 if let color = restyle.color { for position in kept.indices { kept[position].color = color } }
                 words.append(Word(drawing: .exact(kept), width: last.origin.x + last.advance - first.origin.x, spaceBefore: space, startsParagraph: pendingBreak, identity: identity))
@@ -362,9 +442,9 @@ extension PDFEditor {
             }
             // Otherwise in the document's own fonts, if they have every character.
             var codes: [(code: Int, style: PageGlyph)] = []
-            if restyle.fontName == nil, restyle.fontSize == nil {
+            if !restyle.reshapes {
                 for item in current {
-                    if let glyph = item.glyph {
+                    if let glyph = item.glyph, !unseen {
                         codes.append((glyph.code, glyph))
                     } else if interpretation.fontNames[item.style.font] != nil, let code = fonts[item.style.font].code(for: item.text) {
                         codes.append((code, item.style))
@@ -382,7 +462,8 @@ extension PDFEditor {
             // Or the whole word in the closest installed font.
             let style = current[0].style
             let font = fonts[style.font]
-            let name = restyle.fontName ?? FontMatcher.installedName(for: font.baseName, traits: font.traits)
+            var name = restyle.fontName ?? FontMatcher.installedName(for: font.baseName, traits: font.traits)
+            if restyle.isBold != nil || restyle.isItalic != nil { name = FontMatcher.styled(name, bold: restyle.isBold, italic: restyle.isItalic) }
             let size = restyle.fontSize ?? style.fontSize
             let line = TextOutliner.shape(current.map(\.text).joined(), fontName: name, fontSize: size)
             words.append(Word(drawing: .shaped(line, size: size, color: restyle.color ?? style.color), width: line.width, spaceBefore: space, startsParagraph: pendingBreak, identity: identity))
@@ -409,7 +490,8 @@ extension PDFEditor {
         // The box the text is set in: the block's own, unless it is being given another.
         let left = restyle.left ?? block.frame.x
         let right = max(restyle.right ?? PageContent(blocks: [], images: [], geometry: interpretation.geometry).rightLimit(of: block), left + 1)
-        let indents = block.indents
+        let alignment = restyle.alignment ?? block.alignment
+        let indents = alignment == .left || alignment == .justified ? block.indents : (first: 0.0, rest: 0.0)
         func lineStart(_ line: LaidLine) -> Double { left + (line.startsParagraph ? indents.first : indents.rest) }
         // The old lines as words, to recognize them when they come around again.
         let oldStarts = block.paragraphStarts
@@ -465,7 +547,7 @@ extension PDFEditor {
             let available = right - lineStart(lines[number])
             // Justified lines may close up their spaces a little to take one more word.
             let spaces = lines[number].words.dropFirst().reduce(word.spaceBefore) { $0 + $1.spaceBefore }
-            let squeeze = block.alignment == .justified ? spaces * 0.15 : 0
+            let squeeze = alignment == .justified ? spaces * 0.15 : 0
             let fits = lines[number].width + word.spaceBefore + word.width <= available + 0.5 + squeeze
             if !lines[number].words.isEmpty, !fits { lines.append(LaidLine()) }
             var placed = word
@@ -486,8 +568,10 @@ extension PDFEditor {
             leading *= newSize / oldSize
             paragraphGap *= newSize / oldSize
         }
+        if let chosen = restyle.leading { leading = max(chosen, 1) }
+        if let chosen = restyle.paragraphGap { paragraphGap = max(chosen, 0) }
         var baselines: [Double] = []
-        var matchesOld = restyle.fontSize == nil
+        var matchesOld = restyle.fontSize == nil && restyle.leading == nil && restyle.paragraphGap == nil
         for (number, line) in lines.enumerated() {
             let old = firstLine + number
             if number == 0 {
@@ -531,7 +615,7 @@ extension PDFEditor {
             let available = right - start
             var gapStretch = 0.0
             var x = start
-            switch block.alignment {
+            switch alignment {
             case .justified:
                 let extra = available - line.width
                 // Spread to fill the line. The last line of a paragraph is only ever closed up.

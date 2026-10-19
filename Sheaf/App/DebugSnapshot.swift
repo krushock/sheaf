@@ -21,13 +21,15 @@ import UniformTypeIdentifiers
 /// `-SnapshotLayout continuous|singlePage|twoPages`, `-SnapshotPage <number>`,
 /// `-SnapshotGoToPage YES`, `-SnapshotExport <extension>` (prints `EXPORT` lines),
 /// `-SnapshotAction print|exportPanel|duplicate|revert|mailClose|mailCopy|mailListing|mailDraft|saveAs|saveWith:<archival+screen+jpeg+password>`,
+/// `-SnapshotAssistant cloud,device,page,selection,summary,keyPoints,ask:<question_with_underscores>,note,info,selfCheck,
+/// writingTools:<tag>,editorTools:<tag>` (works the Summary panel with Apple Intelligence and prints `ASSISTANT` lines),
 /// `-SnapshotMarkup tools,restyle,undo,redo,save,flatten,bookmarks,reply,existing,mouse,typing,
 /// signatures,signatureSheet` (steps run in order),
 /// `-SnapshotPages organize,select:1-3,rotate,move:1,duplicate,delete,blank[:<paper>|:sheet],split,insert:<path>,extract,
 /// copyPaste,sheet:<name>,watermark,numbers,protect:<password>,unprotect,reduce,info:<title>,undo,redo,saved`
 /// (steps run a quarter of a second apart),
 /// `-SnapshotEdit on,select:<text>,open:<text>,type:<text>,commit,swap:<old>:<new>,move:<dx>:<dy>,nudge:<dx>:<dy>,
-/// delete,size:<pt>,font:<name>,color,newtext:<x>:<y>:<text>,picture:<path>,image,resize:<dx>:<dy>,turn:<degrees>[:shift|hold],
+/// delete,size:<pt>,font:<name>,color,paragraph:<left|center|right|justified>,bold,italic,leading:<pt>,newtext:<x>:<y>:<text>,picture:<path>,image,resize:<dx>:<dy>,turn:<degrees>[:shift|hold],
 /// pointer:<handle number>[:cmd],pick:<picture number>,restack:<toFront|forward|backward|toBack>,align:<left|center|…>,
 /// stretch:<left|right>:<dx>,editorSide:<left|right>:<dx>,flip:<h|v>,opacity:<0…1>,duplicate,cut,copy,link,background,mask[:<x>:<y>:<w>:<h>[:hold]],unmask,menu,paste:<text>,
 /// find:<text>:<replacement>,next,replace,replaceAll,mark:<pattern>,redact:<x1>:<y1>:<x2>:<y2>,preview,apply,ocr,
@@ -450,8 +452,109 @@ enum DebugSnapshot {
     }
 
     private static var didRunForms = false
+    private static var didRunAssistant = false
 
     /// Fills in and builds forms the way the mouse and keyboard would, and reports the fields.
+    /// Works the Summary panel: `summary`, `keyPoints`, `page` (sum up the page, not the
+    /// document), `ask:<question_with_underscores>`, one after another, and prints what comes of each.
+    private static func runAssistant(_ steps: [String], _ viewer: ViewerModel) {
+        viewer.isAssistantVisible = true
+        let assistant = viewer.assistant
+        Task {
+            for step in steps {
+                let start = Date()
+                func elapsed() -> String { String(format: "%.1f s", Date().timeIntervalSince(start)) }
+                if step == "cloud" || step == "device" {
+                    // Which model reads, for this run and after: the same setting as in Settings.
+                    UserDefaults.standard.set(step, forKey: Preferences.readingEngine)
+                    print("ASSISTANT engine asked \(step), used \(Preferences.readingEngineValue), cloud permitted \(DocumentReader.isCloudPermitted) available \(DocumentReader.isCloudAvailable), limit \(DocumentReader.cloudLimit)")
+                } else if step == "page" {
+                    assistant.scope = .page
+                } else if step == "selection" {
+                    if let page = viewer.document?.page(at: viewer.currentPageIndex) {
+                        viewer.pdfView.setCurrentSelection(page.selection(for: page.bounds(for: .cropBox).insetBy(dx: 40, dy: 200)), animate: false)
+                    }
+                    assistant.scope = .selection
+                } else if let kind = SummaryKind(rawValue: step) {
+                    assistant.tab = kind == .summary ? .summary : .keyPoints
+                    assistant.summarize(kind, in: viewer)
+                    while assistant.summaries[kind]?.isRunning == true { try? await Task.sleep(for: .milliseconds(200)) }
+                    let summary = assistant.summaries[kind]
+                    print("ASSISTANT \(step) of \(summary?.subject ?? "nothing") by \(summary?.engine.map { "\($0)" } ?? "none") note \(summary?.note ?? "none") (\(elapsed())): \(summary?.failure.map { "FAILED " + $0 } ?? summary?.text.replacingOccurrences(of: "\n", with: "⏎") ?? "none")")
+                } else if step.hasPrefix("ask:") {
+                    assistant.tab = .ask
+                    assistant.question = step.dropFirst(4).replacingOccurrences(of: "_", with: " ")
+                    assistant.ask(in: viewer)
+                    while assistant.isAnswering { try? await Task.sleep(for: .milliseconds(200)) }
+                    let exchange = assistant.exchanges.last
+                    print("ASSISTANT asked \(exchange?.question ?? "") (\(elapsed())): \(exchange?.failure.map { "FAILED " + $0 } ?? exchange?.answer.replacingOccurrences(of: "\n", with: "⏎") ?? "none") pages \(exchange?.pageIndexes.map { $0 + 1 } ?? []) note \(exchange?.note ?? "none")")
+                } else if step.hasPrefix("writingTools") {
+                    // Sends one of the system's Writing Tools commands with text selected on the page.
+                    if let page = viewer.document?.page(at: viewer.currentPageIndex) {
+                        viewer.pdfView.setCurrentSelection(page.selection(for: page.bounds(for: .cropBox).insetBy(dx: 40, dy: 60)), animate: false)
+                    }
+                    viewer.pdfView.window?.makeFirstResponder(viewer.pdfView.documentView ?? viewer.pdfView)
+                    let tag = Int(step.dropFirst("writingTools:".count)) ?? 0
+                    let item = NSMenuItem.writingToolsItems.first?.submenu?.items.first { $0.tag == tag && !$0.isSeparatorItem }
+                    let responder = viewer.pdfView.window?.firstResponder
+                    let requestor = (responder as? NSResponder)?.validRequestor(forSendType: .string, returnType: nil)
+                    let handled = NSApp.sendAction(#selector(NSResponder.showWritingTools(_:)), to: nil, from: item)
+                    try? await Task.sleep(for: .seconds(4))
+                    print("ASSISTANT writing tools \(item?.title ?? "none"): first responder \(responder.map { String(describing: type(of: $0)) } ?? "none") selection \(viewer.pdfView.currentSelection?.string?.count ?? 0) characters, requestor \(requestor.map { String(describing: type(of: $0)) } ?? "none"), handled \(handled), windows \(NSApp.windows.filter(\.isVisible).map { String(describing: type(of: $0)) })")
+                } else if step.hasPrefix("editorTools") {
+                    // Sends a Writing Tools command to the text being edited on the page, all of it selected.
+                    try? await Task.sleep(for: .seconds(1.5))
+                    guard let editor = viewer.pdfView.window?.firstResponder as? NSTextView else { print("ASSISTANT no text is being edited"); continue }
+                    let before = editor.string
+                    editor.selectAll(nil)
+                    let tag = Int(step.dropFirst("editorTools:".count)) ?? 0
+                    let item = NSMenuItem.writingToolsItems.first?.submenu?.items.first { $0.tag == tag && !$0.isSeparatorItem }
+                    let handled = NSApp.sendAction(#selector(NSResponder.showWritingTools(_:)), to: nil, from: item)
+                    try? await Task.sleep(for: .seconds(9))
+                    print("ASSISTANT editor tools \(item?.title ?? "none"): handled \(handled), behavior \(editor.writingToolsBehavior.rawValue), active \(editor.isWritingToolsActive), still editing \(viewer.pdfView.isEditingContent), text changed \(editor.string != before): \(editor.string.prefix(160).replacingOccurrences(of: "\n", with: "⏎"))")
+                } else if step == "info" {
+                    let pages = await assistant.pages(of: viewer)
+                    do {
+                        let info = try await DocumentReader.suggestInfo(for: pages)
+                        print("ASSISTANT info (\(elapsed())): title \(info.title) | subject \(info.subject) | keywords \(info.keywords)")
+                    } catch { print("ASSISTANT info FAILED \(error.localizedDescription)") }
+                } else if step == "selfCheck" {
+                    // The parts of reading a document that do not need the model, on made-up text.
+                    let long = String(repeating: "The quick brown fox jumps over the lazy dog. ", count: 60)
+                    let pages = [PageText(pageIndex: 0, text: "Lease\nThe rent is 1,200 dollars a month.\n\(long)"), PageText(pageIndex: 1, text: ""), PageText(pageIndex: 2, text: "The deposit is held against damage. Pets are not allowed.")]
+                    let passages = DocumentReader.passages(of: pages, limit: 300)
+                    let groups = DocumentReader.groups(of: passages, budget: 700)
+                    let index = DocumentReader.Index(pages: pages)
+                    let query = DocumentReader.query(for: "How do I make a read-only copy with -r?")
+                    let scores = index.scores(for: DocumentReader.query(for: "Are pets allowed?"))
+                    let best = scores.indices.max { scores[$0] < scores[$1] }.map { index.passages[$0].pageIndex }
+                    let parsed = DocumentReader.parsed("Answer: It is 250 dollars [Page 9].\nPages: 9, 10")
+                    let missing = DocumentReader.parsed("N/A")
+                    print("ASSISTANT selfCheck: passages within limit \(passages.allSatisfy { $0.text.count <= 300 }) keep pages \(Set(passages.map(\.pageIndex)) == [0, 2]) nothing lost \(passages.reduce(0) { $0 + $1.text.filter(\.isLetter).count } == pages.reduce(0) { $0 + $1.text.filter(\.isLetter).count }) groups within budget \(groups.allSatisfy { $0.reduce(0) { $0 + $1.text.count + 1 } <= 701 }) groups \(groups.count) | terms \(DocumentReader.terms(in: "Autorização de VISITA às instalações") == ["autori", "de", "visita", "as", "instal"]) | query nouns \(query.terms["copy"] == 1) verbs \(query.terms["make"] == 0.35) small words dropped \(query.terms["how"] == nil) joined \(query.terms["readon"] == 1) literal \(query.literals == ["-r"]) | best page \(best == 2) | parsed \(parsed.text == "It is 250 dollars." && parsed.pages == [9, 9, 10] && !parsed.isMissing) missing \(missing.isMissing) | key points \(DocumentReader.tidied("- One\n\n* **Two**\n3. Three", as: .keyPoints) == "• One\n• Two\n• Three")")
+                } else if step == "signatureVault" {
+                    // Seals and opens with a key of its own, which is removed again.
+                    let account = "signatures-key-selfcheck"
+                    SignatureVault.deleteKey(account: account)
+                    do {
+                        let key = try SignatureVault.key(account: account, create: true)!
+                        let again = try SignatureVault.key(account: account, create: false)!
+                        let plain = Data("[{\"signature\": \"strokes\"}]".utf8)
+                        let sealed = try SignatureVault.seal(plain, with: key)
+                        var tampered = sealed
+                        tampered[tampered.count - 1] ^= 1
+                        let opened = try SignatureVault.open(sealed, with: again)
+                        print("ASSISTANT vault: round trip \(opened == plain), not readable as is \(sealed.range(of: Data("strokes".utf8)) == nil), tampering caught \((try? SignatureVault.open(tampered, with: key)) == nil), wrong file caught \((try? SignatureVault.open(plain, with: key)) == nil), store kept on disk \(SignatureStore.shared.problem == nil)")
+                    } catch { print("ASSISTANT vault FAILED \(error.localizedDescription)") }
+                    SignatureVault.deleteKey(account: account)
+                    print("ASSISTANT vault key removed \((try? SignatureVault.key(account: account, create: false)) == nil)")
+                } else if step == "note" {
+                    if let text = assistant.summaries.values.first?.text { viewer.addNote(with: text, heading: "Summary by Apple Intelligence") }
+                    print("ASSISTANT note added by \(viewer.selectedAnnotation?.author ?? "nobody"): \(viewer.selectedAnnotation?.contents.prefix(60).replacingOccurrences(of: "\n", with: "⏎") ?? "none")")
+                }
+            }
+        }
+    }
+
     private static func runForms(_ step: String, _ viewer: ViewerModel) {
         guard let document = viewer.sheafDocument else { return }
         let parts = step.split(separator: ":", maxSplits: 1).map(String.init)
@@ -685,13 +788,16 @@ enum DebugSnapshot {
             }
             print("EDIT responder \(String(describing: viewer.pdfView.window?.firstResponder.map { type(of: $0) })) editing=\(viewer.pdfView.isEditingContent)")
         case "type":
-            viewer.pdfView.debugType(argument(1).replacingOccurrences(of: "\\n", with: "\n"))
+            // "\n" is a line break and "_" a space, which flags cannot hold.
+            viewer.pdfView.debugType(argument(1).replacingOccurrences(of: "\\n", with: "\n").replacingOccurrences(of: "_", with: " "))
         case "commit": viewer.pdfView.endContentEditing(commit: true)
         case "swap":
             // Changes some words of a block through the editor, keeping the rest as typed.
             guard let found = block(containing: argument(1)) else { return print("EDIT no block with \(argument(1))") }
             click(found.frame.x + 2, found.frame.y + found.frame.height / 2, count: 2)
-            viewer.pdfView.debugType(found.flowingText.replacingOccurrences(of: argument(1), with: argument(2)))
+            // In the new words, "\n" is a line break and "_" a space, which flags cannot hold.
+            let replacement = argument(2).replacingOccurrences(of: "\\n", with: "\n").replacingOccurrences(of: "_", with: " ")
+            viewer.pdfView.debugType(found.flowingText.replacingOccurrences(of: argument(1), with: replacement))
             viewer.pdfView.endContentEditing(commit: true)
         case "move":
             guard let frame = viewer.selectedBlock?.frame ?? viewer.selectedImage?.frame else { return print("EDIT nothing selected") }
@@ -727,6 +833,33 @@ enum DebugSnapshot {
             print("EDIT pasteboard picture \(image.map { "\(Int($0.size.width))x\(Int($0.size.height))" } ?? "none"), text \(NSPasteboard.general.string(forType: .string)?.prefix(40) ?? "none")")
         case "link": viewer.addLinkToContentSelection()
         case "background": viewer.removeBackgroundOfSelectedPicture()
+        case "panelBottom":
+            // Scrolls the Format panel down by the given number of points, to see what is below.
+            guard let window = viewer.pdfView.window, let content = window.contentView else { break }
+            func scrollViews(in view: NSView) -> [NSScrollView] { (view as? NSScrollView).map { [$0] } ?? [] + view.subviews.flatMap(scrollViews) }
+            let panels = scrollViews(in: content).filter { $0.convert($0.bounds, to: nil).minX > window.frame.width * 0.6 }
+            for panel in panels {
+                let point = NSPoint(x: 0, y: min(Double(argument(1)) ?? 600, max((panel.documentView?.frame.height ?? 0) - panel.contentSize.height, 0)))
+                panel.contentView.scroll(to: panel.documentView?.isFlipped == false ? NSPoint(x: 0, y: (panel.documentView?.frame.height ?? 0) - panel.contentSize.height - point.y) : point)
+                panel.reflectScrolledClipView(panel.contentView)
+            }
+        case "rotateLeft": viewer.rotateSelectedPicture(by: 90)
+        case "rotateRight": viewer.rotateSelectedPicture(by: -90)
+        case "adjust":
+            // adjust:<exposure>:<saturation>:<enhance 0|1>:<temperature>, each from -1 to 1.
+            var settings = viewer.selectedPictureAdjustments
+            settings.exposure = Double(argument(1)) ?? 0
+            settings.saturation = Double(argument(2)) ?? 0
+            settings.isEnhanced = argument(3) == "1"
+            settings.temperature = Double(argument(4)) ?? 0
+            viewer.adjustSelectedPicture(settings)
+        case "autocrop": viewer.autoCropSelectedPicture()
+        case "enlarge":
+            print("EDIT super resolution: model \(SuperResolution.modelState), picture \(viewer.selectedImage.map { "\($0.pixelWidth)x\($0.pixelHeight)" } ?? "none")")
+            viewer.enlargeSelectedPicture()
+        case "describe": viewer.describeSelectedPicture()
+        case "pictureState":
+            print("EDIT picture: \(viewer.selectedImage.map { "\($0.pixelWidth)x\($0.pixelHeight) angle \($0.placement.rotation) shown \(String(describing: $0.shownPart)) frame \($0.frame)" } ?? "none") adjustments \(viewer.selectedPictureAdjustments) work \(String(describing: viewer.pictureWork)) description \(viewer.selectedPictureDescription ?? "none") message \(viewer.editMessage ?? "none") download asked \(viewer.isSuperResolutionDownloadPresented)")
         case "mask":
             // Opens the mask and drags its handles so the given part shows, as fractions of the picture.
             viewer.beginMaskEditing()
@@ -786,6 +919,11 @@ enum DebugSnapshot {
         case "size": viewer.restyleSelectedBlock("Change Text Size", TextRestyle(fontSize: number(1)))
         case "font": viewer.restyleSelectedBlock("Change Font", TextRestyle(fontName: argument(1)))
         case "color": viewer.restyleSelectedBlock("Change Color", TextRestyle(color: .red))
+        case "paragraph":
+            if let alignment = TextBlock.Alignment(rawValue: argument(1)) { viewer.restyleSelectedBlock("Change Alignment", TextRestyle(alignment: alignment)) }
+        case "bold": viewer.restyleSelectedBlock("Change to Bold", TextRestyle(isBold: true))
+        case "italic": viewer.restyleSelectedBlock("Change to Italic", TextRestyle(isItalic: true))
+        case "leading": viewer.restyleSelectedBlock("Change Line Spacing", TextRestyle(leading: number(1)))
         case "newtext":
             viewer.editTool = .text
             click(number(1), number(2))
@@ -936,6 +1074,20 @@ enum DebugSnapshot {
                 didRunMarkup = true
                 for step in markup.split(separator: ",") { runMarkup(String(step), viewer) }
             }
+            // -SnapshotHand pointer|edit|highlight|draw|shape|textBox|note|sign|link|redact|form takes a tool on the strip.
+            if let name = defaults.string(forKey: "SnapshotHand") {
+                let hands: [String: ToolHand] = ["pointer": .pointer, "edit": .edit, "highlight": .highlight, "draw": .draw, "shape": .shape, "textBox": .textBox,
+                                                 "note": .note, "sign": .sign, "link": .link, "redact": .redact, "form": .form]
+                // Pressing the tool in hand again would hide its options; this runs for each configuration.
+                if let hand = hands[name] {
+                    if viewer.hand != hand { viewer.take(hand) } else { viewer.isInspectorVisible = true }
+                }
+                print("HAND \(viewer.hand) panel \(viewer.isInspectorVisible)")
+            }
+            if let steps = defaults.string(forKey: "SnapshotAssistant"), !didRunAssistant {
+                didRunAssistant = true
+                runAssistant(steps.split(separator: ",").map(String.init), viewer)
+            }
             if let forms = defaults.string(forKey: "SnapshotForms"), !didRunForms {
                 didRunForms = true
                 for (index, step) in forms.split(separator: ",").map(String.init).enumerated() {
@@ -1072,6 +1224,9 @@ enum DebugSnapshot {
                 }
                 if let content = window.contentView { walk(content, 0) }
             }
+        }
+        if UserDefaults.standard.string(forKey: "SnapshotHand") != nil {
+            for viewer in ViewerModel.all.allObjects { print("HAND at capture \(viewer.hand) panel \(viewer.isInspectorVisible) assistant \(viewer.isAssistantVisible)") }
         }
         for window in NSApp.windows where window.isVisible {
             if UserDefaults.standard.bool(forKey: "SnapshotTree") {

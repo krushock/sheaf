@@ -65,6 +65,9 @@ public struct TextBlock: Sendable, Equatable, Identifiable {
     /// The PostScript name of an installed font that looks like the block's own, for
     /// showing its text while it is being changed.
     public internal(set) var installedFontName = "Helvetica"
+    /// The font program the document carries for the block's own font, if any: an app can
+    /// load it to show the text being changed exactly as the page does (see `fontProgram(_:)`).
+    public internal(set) var fontProgramID: ObjectID?
 
     /// The block's lines, one per line.
     public var text: String { lines.map(\.text).joined(separator: "\n") }
@@ -210,6 +213,17 @@ public struct PageContent: Sendable, Equatable {
         images.last { $0.contains(point) }
     }
 
+    /// Where the page's text runs, as displayed: from where its text starts furthest left
+    /// to where its paragraphs reach furthest right. A page with no paragraph is given as
+    /// much room on the right as on the left.
+    public var column: (left: Double, right: Double) {
+        let width = geometry.displaySize.width
+        let left = min(max(blocks.map(\.frame.x).min() ?? 0, 0), width * 0.25)
+        let paragraphs = blocks.filter { $0.lines.count > 1 }.map { $0.frame.x + $0.frame.width }
+        let right = paragraphs.max() ?? width - left
+        return (left, max(right, left + 1))
+    }
+
     /// How far right a block's lines may reach when its text is set again.
     ///
     /// A paragraph keeps its width. A single line, such as a heading, has no width of its
@@ -227,6 +241,13 @@ public struct PageContent: Sendable, Equatable {
 }
 
 extension PDFEditor {
+    /// The bytes of a font program the document carries, as a font file: Type 1, TrueType,
+    /// or compact (CFF). Subsets hold only the glyphs the document uses.
+    public func fontProgram(_ id: ObjectID) throws -> Data? {
+        guard let stream = try object(id).streamValue else { return nil }
+        return try decodedData(of: stream)
+    }
+
     /// Reads what a page draws: text grouped into lines and blocks, and pictures.
     ///
     /// Positions are on the page as displayed. `PageGeometry` converts to and from the
@@ -318,6 +339,7 @@ extension PDFEditor {
                     installed[font] = FontMatcher.installedName(for: interpretation.fonts[font].baseName, traits: interpretation.fonts[font].traits)
                 }
                 blocks[index].installedFontName = installed[font] ?? "Helvetica"
+                blocks[index].fontProgramID = interpretation.fonts[font].programID
             }
             if blocks[index].isEditable {
                 let glyphs = blocks[index].lines.flatMap(\.glyphs).filter { !$0.isImplied }
@@ -469,6 +491,13 @@ extension PDFEditor {
         let allEndRight = lines.filter { abs($0.frame.x + $0.frame.width - right) < tolerance }.count
         let center = (left + right) / 2
         let centered = lines.filter { abs($0.frame.x + $0.frame.width / 2 - center) < tolerance }.count
+        // Full lines read the same whichever way a paragraph is set. The last line tells:
+        // short and in the middle, or short against the right side, it was centered or
+        // set to the right.
+        if let last = lines.last, abs(last.frame.x - left) >= tolerance {
+            if centered == lines.count { return .center }
+            if allEndRight == lines.count { return .right }
+        }
         if startsLeft >= lines.count - 1, body.count >= 2, endsRight == body.count { return .justified }
         // Several paragraphs in one block: most lines run from edge to edge, and the
         // ones that do not are first lines, set in, and last lines, which stop short.

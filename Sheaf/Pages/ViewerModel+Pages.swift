@@ -6,7 +6,8 @@ import UniformTypeIdentifiers
 /// The sheets that tools show on a document window.
 enum ToolSheet: String, Identifiable {
     case watermark, headerFooter, info, password, reduce, split, exportImages, scanner, recognize
-    case exportWord, exportExcel, exportArchival, blankPage, working
+    case exportWord, exportExcel, exportArchival, exportText, exportRichText, exportWebPage, blankPage, working
+    case bates, cropPages, background, hiddenInformation
 
     var id: Self { self }
 }

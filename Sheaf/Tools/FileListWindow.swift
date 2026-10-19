@@ -129,12 +129,14 @@ struct ListControls: View {
                 Image(systemName: "plus").frame(width: 24, height: 20)
             }
             .help("Add files")
+            .accessibilityLabel("Add Files")
             Divider().frame(height: 14)
             Button(action: remove) {
                 Image(systemName: "minus").frame(width: 24, height: 20)
             }
             .disabled(!canRemove)
             .help("Remove the selected files")
+            .accessibilityLabel("Remove Files")
         }
         .buttonStyle(.borderless)
     }

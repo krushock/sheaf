@@ -102,6 +102,23 @@ nonisolated enum Preferences {
     static let organizerPageSizeKey = "organizer.pageSize"
     static let highlightsFields = "forms.highlightsFields"
     static let pictureKeepsProportions = "editing.pictureKeepsProportions"
+    static let readingEngine = "intelligence.engine"
+    static let markupAuthor = "markup.authorName"
+
+    /// The name written into notes, highlights and other markup as their author: the
+    /// person's own name unless they set another in Settings, nothing if they emptied it.
+    /// It travels with every PDF they share.
+    static var markupAuthorValue: String? {
+        let name = (UserDefaults.standard.string(forKey: markupAuthor) ?? NSFullUserName()).trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? nil : name
+    }
+
+    /// Which model sums documents up and answers questions: the one on this Mac unless
+    /// the person chose Private Cloud Compute and it can be used.
+    static var readingEngineValue: ReadingEngine {
+        let chosen = value(readingEngine, default: ReadingEngine.device)
+        return chosen == .cloud && DocumentReader.isCloudAvailable ? .cloud : .device
+    }
 
     /// Whether resizing a picture by a corner, or by typing one side, keeps its shape.
     static var pictureKeepsProportionsValue: Bool {

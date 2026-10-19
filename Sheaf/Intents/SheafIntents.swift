@@ -1,5 +1,6 @@
 import AppIntents
 import Foundation
+import PDFKit
 import SheafKit
 import UniformTypeIdentifiers
 
@@ -539,6 +540,47 @@ struct RunFlowIntent: AppIntent {
         return .result(value: outputs.map { output in
             IntentFile(data: output.data, filename: "\(output.name).\(output.fileExtension)", type: UTType(filenameExtension: output.fileExtension))
         })
+    }
+}
+
+nonisolated enum IntentSummaryKind: String, AppEnum {
+    case summary, keyPoints
+
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Kind of Summary"
+    static let caseDisplayRepresentations: [IntentSummaryKind: DisplayRepresentation] = [
+        .summary: "Summary", .keyPoints: "Key Points",
+    ]
+}
+
+struct SummarizePDFIntent: AppIntent {
+    static let title: LocalizedStringResource = "Summarize PDF"
+    static let description = IntentDescription("Sums up what a PDF says, with Apple Intelligence on this Mac. A scanned PDF has to have its text recognized first.", categoryName: "Documents")
+
+    @Parameter(title: "PDF", supportedContentTypes: [.pdf])
+    var file: IntentFile
+
+    @Parameter(title: "As", default: .summary)
+    var kind: IntentSummaryKind
+
+    @Parameter(title: "Password", description: "Used if the PDF is protected.")
+    var password: String?
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Summarize \(\.$file) as \(\.$kind)") {
+            \.$password
+        }
+    }
+
+    func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        let data = file.data, password = password
+        let pages = try await background {
+            guard let document = PDFDocument(data: data) else { throw ToolError.nothingToDo }
+            if document.isLocked, !document.unlock(withPassword: password ?? "") { throw ToolError.nothingToDo }
+            return (0..<document.pageCount).map { PageText(pageIndex: $0, text: document.page(at: $0)?.string ?? "") }
+        }
+        // By the model chosen in Settings, as in the app.
+        let reading = try await DocumentReader.summarize(pages, as: kind == .summary ? .summary : .keyPoints, using: Preferences.readingEngineValue) { _ in }
+        return .result(value: reading.text)
     }
 }
 

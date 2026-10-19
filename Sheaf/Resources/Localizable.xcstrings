@@ -991,6 +991,16 @@
         }
       }
     },
+    "%lld°" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld°"
+          }
+        }
+      }
+    },
     "1 document" : {
       "localizations" : {
         "ru" : {
@@ -1151,6 +1161,16 @@
         }
       }
     },
+    "ACME-" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ACME-"
+          }
+        }
+      }
+    },
     "Across the Middle" : {
       "localizations" : {
         "ru" : {
@@ -1211,6 +1231,26 @@
         }
       }
     },
+    "Add Background" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добавить фон"
+          }
+        }
+      }
+    },
+    "Add Bates Numbers" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добавить номера Бейтса"
+          }
+        }
+      }
+    },
     "Add Bookmark" : {
       "localizations" : {
         "ru" : {
@@ -1237,6 +1277,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Добавить поле"
+          }
+        }
+      }
+    },
+    "Add Files" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добавить файлы"
           }
         }
       }
@@ -1341,6 +1391,16 @@
         }
       }
     },
+    "Add Picture…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добавить изображение…"
+          }
+        }
+      }
+    },
     "Add Rectangle" : {
       "localizations" : {
         "ru" : {
@@ -1431,22 +1491,12 @@
         }
       }
     },
-    "Add a picture to the page" : {
+    "Add as Note" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Добавить изображение на страницу"
-          }
-        }
-      }
-    },
-    "Add and change form fields" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Добавление и изменение полей формы"
+            "value" : "Добавить как заметку"
           }
         }
       }
@@ -1501,6 +1551,46 @@
         }
       }
     },
+    "Adjust Picture" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Коррекция изображения"
+          }
+        }
+      }
+    },
+    "Adjustments" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Коррекция"
+          }
+        }
+      }
+    },
+    "After the Number" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "После номера"
+          }
+        }
+      }
+    },
+    "Again" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ещё раз"
+          }
+        }
+      }
+    },
     "Align" : {
       "localizations" : {
         "ru" : {
@@ -1511,12 +1601,32 @@
         }
       }
     },
+    "Align Left" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "По левому краю"
+          }
+        }
+      }
+    },
     "Align Picture" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Выровнять изображение"
+          }
+        }
+      }
+    },
+    "Align Right" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "По правому краю"
           }
         }
       }
@@ -1651,6 +1761,86 @@
         }
       }
     },
+    "Answers can be wrong. Check the pages they name." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ответы могут быть неверными. Сверяйтесь с указанными страницами."
+          }
+        }
+      }
+    },
+    "Any Color" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Любой цвет"
+          }
+        }
+      }
+    },
+    "Apple Intelligence" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence"
+          }
+        }
+      }
+    },
+    "Apple Intelligence could not work with this text." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence не удалось обработать этот текст."
+          }
+        }
+      }
+    },
+    "Apple Intelligence is not available right now." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence сейчас недоступен."
+          }
+        }
+      }
+    },
+    "Apple Intelligence is still getting ready on this Mac. Try again in a while." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence ещё подготавливается на этом Mac. Повторите попытку позже."
+          }
+        }
+      }
+    },
+    "Apple Intelligence reads the document on this Mac and lists the points that matter most." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence читает документ на этом Mac и перечисляет самое важное."
+          }
+        }
+      }
+    },
+    "Apple Intelligence reads the document on this Mac and says in a few sentences what it is about." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence читает документ на этом Mac и в нескольких предложениях говорит, о чём он."
+          }
+        }
+      }
+    },
     "Apply %lld…" : {
       "localizations" : {
         "ru" : {
@@ -1731,6 +1921,46 @@
         }
       }
     },
+    "As" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Как"
+          }
+        }
+      }
+    },
+    "Ask" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вопрос"
+          }
+        }
+      }
+    },
+    "Ask about this document" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Спросите об этом документе"
+          }
+        }
+      }
+    },
+    "Ask what the document says. Apple Intelligence answers on this Mac from the document's text, and names the pages the answer is from." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Спросите, что сказано в документе. Apple Intelligence отвечает на этом Mac по тексту документа и называет страницы, откуда взят ответ."
+          }
+        }
+      }
+    },
     "At Each Top-Level Bookmark" : {
       "localizations" : {
         "ru" : {
@@ -1751,6 +1981,16 @@
         }
       }
     },
+    "At Least %lld Digits" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не менее %lld цифр"
+          }
+        }
+      }
+    },
     "At Start" : {
       "localizations" : {
         "ru" : {
@@ -1761,12 +2001,32 @@
         }
       }
     },
+    "Attached Files" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вложенные файлы"
+          }
+        }
+      }
+    },
     "Author" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Автор"
+          }
+        }
+      }
+    },
+    "Auto Crop" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Автообрезка"
           }
         }
       }
@@ -1801,12 +2061,78 @@
         }
       }
     },
+    "Background…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Фон…"
+          }
+        }
+      }
+    },
     "Balanced" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Сбалансированно"
+          }
+        }
+      }
+    },
+    "Bates Number" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Номер Бейтса"
+          }
+        }
+      }
+    },
+    "Bates Numbering…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нумерация Бейтса…"
+          }
+        }
+      }
+    },
+    "Bates numbers count the pages they are added to, in order: %@, %@ and so on. To number several documents as one series, start each where the last one ended." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Bates numbers count the pages they are added to, in order: %1$@, %2$@ and so on. To number several documents as one series, start each where the last one ended."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Номера Бейтса считают страницы, на которые добавлены, по порядку: %@, %@ и так далее. Чтобы пронумеровать несколько документов одной серией, начинайте каждый с того номера, на котором закончился предыдущий."
+          }
+        }
+      }
+    },
+    "Before Paragraph" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перед абзацем"
+          }
+        }
+      }
+    },
+    "Before the Number" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перед номером"
           }
         }
       }
@@ -1851,12 +2177,32 @@
         }
       }
     },
+    "Bold" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Жирный"
+          }
+        }
+      }
+    },
     "Bookmark Each Document" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Закладка для каждого документа"
+          }
+        }
+      }
+    },
+    "Bookmarks" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Закладки"
           }
         }
       }
@@ -2131,6 +2477,16 @@
         }
       }
     },
+    "Change Line Spacing" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изменение межстрочного интервала"
+          }
+        }
+      }
+    },
     "Change Line Width" : {
       "localizations" : {
         "ru" : {
@@ -2187,6 +2543,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Изменить вариант"
+          }
+        }
+      }
+    },
+    "Change Paragraph Spacing" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изменение отступа между абзацами"
           }
         }
       }
@@ -2281,12 +2647,22 @@
         }
       }
     },
-    "Change the text and pictures on the pages" : {
+    "Change to Bold" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Изменение текста и изображений на страницах"
+            "value" : "Жирный шрифт"
+          }
+        }
+      }
+    },
+    "Change to Italic" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Курсив"
           }
         }
       }
@@ -2327,6 +2703,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Проверьте диапазоны страниц."
+          }
+        }
+      }
+    },
+    "Check what matters against the document." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Важное сверяйте с документом."
           }
         }
       }
@@ -2407,6 +2793,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Выберите папку для результатов. Исходные файлы не изменяются."
+          }
+        }
+      }
+    },
+    "Choose a kind of field and drag on the page where it goes. Click a field to change it." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выберите вид поля и потяните по странице там, где оно нужно. Нажмите на поле, чтобы изменить его."
           }
         }
       }
@@ -2655,22 +3051,32 @@
         }
       }
     },
-    "Click Edit, then double-click any paragraph to type in it. Pictures can be moved and resized too." : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Нажмите «Правка», затем дважды нажмите любой абзац, чтобы печатать в нём. Изображения тоже можно перемещать и менять их размер."
-          }
-        }
-      }
-    },
     "Click a page to type new text" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Нажмите на страницу, чтобы ввести новый текст"
+          }
+        }
+      }
+    },
+    "Click on the page where the note goes, then type." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нажмите на странице там, где нужна заметка, и введите текст."
+          }
+        }
+      }
+    },
+    "Click on the page where the text goes, or drag to make a box." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нажмите на странице там, где нужен текст, или потяните, чтобы задать рамку."
           }
         }
       }
@@ -2701,6 +3107,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Комментарий"
+          }
+        }
+      }
+    },
+    "Comments and Markup" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Комментарии и пометки"
           }
         }
       }
@@ -2805,6 +3221,16 @@
         }
       }
     },
+    "Contrast" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Контраст"
+          }
+        }
+      }
+    },
     "Convert" : {
       "localizations" : {
         "ru" : {
@@ -2861,6 +3287,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Скопировать"
+          }
+        }
+      }
+    },
+    "Copy the description" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скопировать описание"
+          }
+        }
+      }
+    },
+    "Copy the text" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скопировать текст"
           }
         }
       }
@@ -2925,6 +3371,46 @@
         }
       }
     },
+    "Crop" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Обрезать"
+          }
+        }
+      }
+    },
+    "Crop Pages" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Обрезка страниц"
+          }
+        }
+      }
+    },
+    "Crop Pages…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Обрезать страницы…"
+          }
+        }
+      }
+    },
+    "Cropping hides the edges of pages without deleting anything. Show Whole Pages brings back what was cut away." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Обрезка скрывает края страниц, ничего не удаляя. «Показать страницы целиком» возвращает то, что было обрезано."
+          }
+        }
+      }
+    },
     "Current Page (%lld)" : {
       "localizations" : {
         "ru" : {
@@ -2965,12 +3451,12 @@
         }
       }
     },
-    "Custom…" : {
+    "Custom Stamp…" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Свой…"
+            "value" : "Свой штамп…"
           }
         }
       }
@@ -2981,6 +3467,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Вырезать"
+          }
+        }
+      }
+    },
+    "Cut Away from the Edges" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Обрезать от краёв"
           }
         }
       }
@@ -3025,12 +3521,12 @@
         }
       }
     },
-    "Default PDF app" : {
+    "Default Apps" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Приложение для PDF по умолчанию"
+            "value" : "Приложения по умолчанию"
           }
         }
       }
@@ -3115,6 +3611,36 @@
         }
       }
     },
+    "Describe" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Описать"
+          }
+        }
+      }
+    },
+    "Describe Again" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Описать ещё раз"
+          }
+        }
+      }
+    },
+    "Description" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Описание"
+          }
+        }
+      }
+    },
     "Detect Fields" : {
       "localizations" : {
         "ru" : {
@@ -3135,12 +3661,32 @@
         }
       }
     },
+    "Different Apps" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Разные приложения"
+          }
+        }
+      }
+    },
     "Document Info…" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Сведения о документе…"
+          }
+        }
+      }
+    },
+    "Document Tools" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Инструменты документа"
           }
         }
       }
@@ -3165,6 +3711,16 @@
         }
       }
     },
+    "Double-click text on the page to type in it. Click text or a picture to select it, then drag it, or change it here." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Дважды нажмите на текст страницы, чтобы печатать в нём. Нажмите на текст или изображение, чтобы выбрать его, затем перетащите или измените здесь."
+          }
+        }
+      }
+    },
     "Double-click the text to type in it. What you type uses the document's own font where it has the letters, and the closest installed font where it does not." : {
       "localizations" : {
         "ru" : {
@@ -3181,6 +3737,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Вдоль посередине"
+          }
+        }
+      }
+    },
+    "Download" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Загрузить"
+          }
+        }
+      }
+    },
+    "Download Super Resolution?" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Загрузить «Сверхвысокое разрешение»?"
           }
         }
       }
@@ -3205,12 +3781,52 @@
         }
       }
     },
+    "Drag across to move the tools to the other side" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перетащите поперёк окна, чтобы перенести инструменты на другую сторону"
+          }
+        }
+      }
+    },
+    "Drag over text or an area of the page to make a link, then choose where it goes." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выделите текст или область страницы, чтобы сделать ссылку, затем укажите, куда она ведёт."
+          }
+        }
+      }
+    },
+    "Drag over text to select it. Click a note, a drawing or a stamp to select it, then move it, resize it or change it here." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Протяните по тексту, чтобы выделить его. Нажмите на заметку, рисунок или штамп, чтобы выбрать, затем переместите, измените размер или настройте здесь."
+          }
+        }
+      }
+    },
     "Drag over what should be removed for good" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Проведите по тому, что нужно удалить навсегда"
+          }
+        }
+      }
+    },
+    "Drag over what to remove. Nothing is removed until you apply the marks." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выделите то, что нужно удалить. Ничего не удаляется, пока Вы не примените пометки."
           }
         }
       }
@@ -3231,6 +3847,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Перетягивайте манипуляторы, чтобы выбрать видимую часть изображения, или тяните внутри, чтобы сдвинуть её по изображению. Изображение остаётся в документе целиком."
+          }
+        }
+      }
+    },
+    "Drag to turn the picture. Hold Shift for steps of 15°." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Потяните, чтобы повернуть изображение. С клавишей Shift — шагами по 15°."
           }
         }
       }
@@ -3325,6 +3951,16 @@
         }
       }
     },
+    "Each kind of picture" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Каждый вид изображений"
+          }
+        }
+      }
+    },
     "Each page becomes a sheet. Text that lines up in rows and columns lands in rows and columns, and numbers become numbers. Pages of running text become one column." : {
       "localizations" : {
         "ru" : {
@@ -3365,6 +4001,16 @@
         }
       }
     },
+    "Edit Form Fields" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поля формы"
+          }
+        }
+      }
+    },
     "Edit Mask" : {
       "localizations" : {
         "ru" : {
@@ -3381,6 +4027,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Изменить текст"
+          }
+        }
+      }
+    },
+    "Edit Text and Pictures" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Править текст и изображения"
+          }
+        }
+      }
+    },
+    "Edit the page's own text and pictures" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Править собственный текст и изображения страницы"
           }
         }
       }
@@ -3415,12 +4081,32 @@
         }
       }
     },
+    "Empty a field to have it suggested." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Очистите поле, чтобы получить для него предложение."
+          }
+        }
+      }
+    },
     "Encrypts a PDF with AES 256-bit, so it needs a password to open." : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Шифрует PDF по алгоритму AES с 256-битным ключом, так что для открытия нужен пароль."
+          }
+        }
+      }
+    },
+    "Enhance" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Улучшить"
           }
         }
       }
@@ -3605,6 +4291,36 @@
         }
       }
     },
+    "Export as Plain Text" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Экспорт в простой текст"
+          }
+        }
+      }
+    },
+    "Export as Rich Text" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Экспорт в RTF"
+          }
+        }
+      }
+    },
+    "Export as Web Page" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Экспорт в веб-страницу"
+          }
+        }
+      }
+    },
     "Export to Excel" : {
       "localizations" : {
         "ru" : {
@@ -3655,6 +4371,16 @@
         }
       }
     },
+    "Exposure" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Экспозиция"
+          }
+        }
+      }
+    },
     "Extract PDF Pages" : {
       "localizations" : {
         "ru" : {
@@ -3691,6 +4417,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Файлы"
+          }
+        }
+      }
+    },
+    "Files carried inside the document." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Файлы, хранящиеся внутри документа."
           }
         }
       }
@@ -3791,26 +4527,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Найти и заменить…"
-          }
-        }
-      }
-    },
-    "Find and replace text" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Поиск и замена текста"
-          }
-        }
-      }
-    },
-    "Find to Redact" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Найти для вымарывания"
           }
         }
       }
@@ -4065,6 +4781,26 @@
         }
       }
     },
+    "Form Fields" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поля формы"
+          }
+        }
+      }
+    },
+    "Form fields" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поля формы"
+          }
+        }
+      }
+    },
     "Format" : {
       "localizations" : {
         "ru" : {
@@ -4091,6 +4827,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Вперёд"
+          }
+        }
+      }
+    },
+    "Found %lld" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Найдено: %lld"
           }
         }
       }
@@ -4151,6 +4897,16 @@
         }
       }
     },
+    "Give the picture four times the pixels, sharper, in the same place" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Увеличить число пикселей изображения вчетверо и сделать его чётче, не сдвигая с места"
+          }
+        }
+      }
+    },
     "Go" : {
       "localizations" : {
         "ru" : {
@@ -4181,6 +4937,16 @@
         }
       }
     },
+    "Go to page %lld" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перейти к странице %lld"
+          }
+        }
+      }
+    },
     "Goes to" : {
       "localizations" : {
         "ru" : {
@@ -4197,6 +4963,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "HEIC"
+          }
+        }
+      }
+    },
+    "Have Apple Intelligence say what the picture shows" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Попросить Apple Intelligence сказать, что на изображении"
+          }
+        }
+      }
+    },
+    "Have Apple Intelligence suggest a title, a subject and keywords from the document's text" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Попросить Apple Intelligence предложить название, тему и ключевые слова по тексту документа"
           }
         }
       }
@@ -4241,12 +5027,12 @@
         }
       }
     },
-    "Hide Inspector" : {
+    "Hide Options" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Скрыть инспектор"
+            "value" : "Скрыть параметры"
           }
         }
       }
@@ -4257,6 +5043,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Скрыть боковое меню"
+          }
+        }
+      }
+    },
+    "Hide Summary" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скрыть резюме"
           }
         }
       }
@@ -4297,6 +5093,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Выделяйте, комментируйте и подписывайте"
+          }
+        }
+      }
+    },
+    "Highlights" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Светлые участки"
           }
         }
       }
@@ -4361,6 +5167,16 @@
         }
       }
     },
+    "Image Playground…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Image Playground…"
+          }
+        }
+      }
+    },
     "Images" : {
       "localizations" : {
         "ru" : {
@@ -4387,6 +5203,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Изображения в PDF…"
+          }
+        }
+      }
+    },
+    "Images…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изображения…"
           }
         }
       }
@@ -4421,6 +5247,16 @@
         }
       }
     },
+    "Insert a picture, text or pages" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вставить изображение, текст или страницы"
+          }
+        }
+      }
+    },
     "Insert from File…" : {
       "localizations" : {
         "ru" : {
@@ -4451,6 +5287,16 @@
         }
       }
     },
+    "Intelligence" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Intelligence"
+          }
+        }
+      }
+    },
     "Into Single Pages" : {
       "localizations" : {
         "ru" : {
@@ -4471,12 +5317,32 @@
         }
       }
     },
+    "Italic" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Курсив"
+          }
+        }
+      }
+    },
     "JPEG" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "JPEG"
+          }
+        }
+      }
+    },
+    "JavaScript, and actions that run when the document opens or that send form data." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JavaScript и действия, которые выполняются при открытии документа или отправляют данные формы."
           }
         }
       }
@@ -4501,6 +5367,26 @@
         }
       }
     },
+    "Just the words, in reading order, one paragraph to a line. Opens in any app." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Только слова, в порядке чтения, по абзацу на строку. Открывается в любой программе."
+          }
+        }
+      }
+    },
+    "Justify" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "По ширине"
+          }
+        }
+      }
+    },
     "Keep Everything Exact" : {
       "localizations" : {
         "ru" : {
@@ -4511,12 +5397,42 @@
         }
       }
     },
+    "Key Points" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тезисы"
+          }
+        }
+      }
+    },
+    "Key points by Apple Intelligence" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тезисы от Apple Intelligence"
+          }
+        }
+      }
+    },
     "Keywords" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ключевые слова"
+          }
+        }
+      }
+    },
+    "Kind of Summary" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вид резюме"
           }
         }
       }
@@ -4581,6 +5497,26 @@
         }
       }
     },
+    "Less" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Меньше"
+          }
+        }
+      }
+    },
+    "Let the system improve the picture's light and color" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Автоматически улучшить свет и цвет изображения"
+          }
+        }
+      }
+    },
     "Limit What Others Can Do" : {
       "localizations" : {
         "ru" : {
@@ -4611,12 +5547,12 @@
         }
       }
     },
-    "Line Width" : {
+    "Line Spacing" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Толщина линии"
+            "value" : "Межстрочный интервал"
           }
         }
       }
@@ -4687,6 +5623,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Создано в"
+          }
+        }
+      }
+    },
+    "Made by" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Кем составлено"
+          }
+        }
+      }
+    },
+    "Made by Apple Intelligence on Private Cloud Compute, which keeps none of the text." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Составлено Apple Intelligence в Private Cloud Compute, где текст не сохраняется."
+          }
+        }
+      }
+    },
+    "Made by Apple Intelligence on this Mac." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Составлено Apple Intelligence на этом Mac."
           }
         }
       }
@@ -4881,12 +5847,12 @@
         }
       }
     },
-    "Mark every place a kind of text is found" : {
+    "Mark Text" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Отметить все места, где найден текст определённого вида"
+            "value" : "Пометка текста"
           }
         }
       }
@@ -4897,16 +5863,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Отметить для вымарывания"
-          }
-        }
-      }
-    },
-    "Markup" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Разметка"
           }
         }
       }
@@ -4927,6 +5883,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Маска изображения"
+          }
+        }
+      }
+    },
+    "Mask the picture down to the part that matters" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Оставить в маске главную часть изображения"
           }
         }
       }
@@ -4991,6 +5957,16 @@
         }
       }
     },
+    "Metadata" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Метаданные"
+          }
+        }
+      }
+    },
     "Method" : {
       "localizations" : {
         "ru" : {
@@ -5017,6 +5993,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Изменён"
+          }
+        }
+      }
+    },
+    "More" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Больше"
+          }
+        }
+      }
+    },
+    "More Adjustments" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Другие настройки"
           }
         }
       }
@@ -5071,12 +6067,42 @@
         }
       }
     },
+    "Move Tools to the Left" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перенести инструменты влево"
+          }
+        }
+      }
+    },
+    "Move Tools to the Right" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перенести инструменты вправо"
+          }
+        }
+      }
+    },
     "Name" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Имя"
+          }
+        }
+      }
+    },
+    "Name on notes and markup" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Имя в заметках и пометках"
           }
         }
       }
@@ -5531,12 +6557,32 @@
         }
       }
     },
+    "Notes, highlights, drawings and stamps. Links and form fields stay." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Заметки, выделения, рисунки и штампы. Ссылки и поля формы остаются."
+          }
+        }
+      }
+    },
     "Nothing Selected" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ничего не выбрано"
+          }
+        }
+      }
+    },
+    "Nothing in this picture stands out enough to crop to." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "На этом изображении нет ничего, что выделялось бы достаточно для обрезки."
           }
         }
       }
@@ -5591,6 +6637,16 @@
         }
       }
     },
+    "Of" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Чего"
+          }
+        }
+      }
+    },
     "On %@, %@ wrote:" : {
       "localizations" : {
         "en" : {
@@ -5629,6 +6685,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "На странице"
+          }
+        }
+      }
+    },
+    "On This Mac" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "На этом Mac"
+          }
+        }
+      }
+    },
+    "On This Mac keeps everything on your Mac. It reads a few pages at a time, so long documents take minutes." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вариант «На этом Mac» ничего не отправляет с Вашего Mac. Он читает по несколько страниц за раз, поэтому длинные документы занимают минуты."
           }
         }
       }
@@ -5849,6 +6925,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Версия PDF"
+          }
+        }
+      }
+    },
+    "PDF documents" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Документы PDF"
           }
         }
       }
@@ -6109,6 +7195,16 @@
         }
       }
     },
+    "Paragraph" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Абзац"
+          }
+        }
+      }
+    },
     "Password" : {
       "localizations" : {
         "ru" : {
@@ -6219,6 +7315,16 @@
         }
       }
     },
+    "Picture description by Apple Intelligence" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Описание изображения от Apple Intelligence"
+          }
+        }
+      }
+    },
     "Picture, %lld by %lld points" : {
       "localizations" : {
         "en" : {
@@ -6231,6 +7337,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Изображение, %lld на %lld пунктов"
+          }
+        }
+      }
+    },
+    "Pictures" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изображения"
           }
         }
       }
@@ -6291,6 +7407,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Пикселей на дюйм"
+          }
+        }
+      }
+    },
+    "Plain Text…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Простой текст…"
           }
         }
       }
@@ -6385,6 +7511,86 @@
         }
       }
     },
+    "Private Cloud Compute" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Private Cloud Compute"
+          }
+        }
+      }
+    },
+    "Private Cloud Compute could not be reached, so this was made on this Mac." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось связаться с Private Cloud Compute, поэтому это составлено на этом Mac."
+          }
+        }
+      }
+    },
+    "Private Cloud Compute could not do this, so it was made on this Mac." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Private Cloud Compute не справился с этим, поэтому это составлено на этом Mac."
+          }
+        }
+      }
+    },
+    "Private Cloud Compute has reached its limit for now, so this was made on this Mac." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Лимит Private Cloud Compute пока исчерпан, поэтому это составлено на этом Mac."
+          }
+        }
+      }
+    },
+    "Private Cloud Compute has reached its limit until %@, so this was made on this Mac." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Лимит Private Cloud Compute исчерпан до %@, поэтому это составлено на этом Mac."
+          }
+        }
+      }
+    },
+    "Private Cloud Compute is not available on this Mac right now." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Private Cloud Compute сейчас недоступен на этом Mac."
+          }
+        }
+      }
+    },
+    "Private Cloud Compute sends the document's text to Apple's larger model on servers built so that nobody, Apple included, can keep or see it. It takes in four times as much at once, so a long document is read in far fewer parts. macOS limits how much it can be used; past the limit, Sheaf goes back to this Mac and says so." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Private Cloud Compute отправляет текст документа более крупной модели Apple на серверах, устроенных так, что никто, включая Apple, не может его сохранить или увидеть. Модель принимает вчетверо больше текста за раз, поэтому длинный документ читается гораздо меньшим числом частей. macOS ограничивает объём использования; сверх лимита Sheaf возвращается к этому Mac и сообщает об этом."
+          }
+        }
+      }
+    },
+    "Private Data of Other Apps" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Служебные данные других программ"
+          }
+        }
+      }
+    },
     "Protect ${file} with ${newPassword}" : {
       "localizations" : {
         "ru" : {
@@ -6415,12 +7621,32 @@
         }
       }
     },
+    "Put the description on this page as a note" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поместить описание на эту страницу как заметку"
+          }
+        }
+      }
+    },
     "Put the font %@ inside the file" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Шрифт %@ помещён в файл"
+          }
+        }
+      }
+    },
+    "Put the text on this page as a note" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поместить текст на эту страницу как заметку"
           }
         }
       }
@@ -6505,12 +7731,48 @@
         }
       }
     },
+    "Read Out Loud" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Читать вслух"
+          }
+        }
+      }
+    },
+    "Reading part %lld of %lld…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reading part %1$lld of %2$lld…"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Чтение части %1$lld из %2$lld…"
+          }
+        }
+      }
+    },
     "Reading the pages…" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Чтение страниц…"
+          }
+        }
+      }
+    },
+    "Reading…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Чтение…"
           }
         }
       }
@@ -6655,12 +7917,32 @@
         }
       }
     },
+    "Redact: remove text and pictures for good" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скрыть данные: удалить текст и изображения навсегда"
+          }
+        }
+      }
+    },
     "Redaction Mark" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Метка вымарывания"
+          }
+        }
+      }
+    },
+    "Redo (⇧⌘Z)" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Повторить (⇧⌘Z)"
           }
         }
       }
@@ -6785,12 +8067,62 @@
         }
       }
     },
+    "Remove Files" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить файлы"
+          }
+        }
+      }
+    },
+    "Remove Hidden Information" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удаление скрытых данных"
+          }
+        }
+      }
+    },
+    "Remove Hidden Information…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить скрытые данные…"
+          }
+        }
+      }
+    },
+    "Remove Marks" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Убрать пометки"
+          }
+        }
+      }
+    },
     "Remove Option" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Удалить вариант"
+          }
+        }
+      }
+    },
+    "Remove Option %lld" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить вариант %lld"
           }
         }
       }
@@ -6841,6 +8173,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Удалить миниатюры и служебные данные приложений"
+          }
+        }
+      }
+    },
+    "Remove White Margins" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Убрать белые поля"
+          }
+        }
+      }
+    },
+    "Remove from the Document" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить из документа"
           }
         }
       }
@@ -6905,16 +8257,6 @@
         }
       }
     },
-    "Remove what is under the marks for good" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Навсегда удалить то, что под метками"
-          }
-        }
-      }
-    },
     "Removed" : {
       "localizations" : {
         "ru" : {
@@ -6931,6 +8273,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Удалено: %@. Сохраните документ, чтобы оставить вымаранную версию."
+          }
+        }
+      }
+    },
+    "Removed %@. Save the document to keep this version." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалено: %@. Сохраните документ, чтобы оставить эту версию."
           }
         }
       }
@@ -7307,6 +8659,16 @@
         }
       }
     },
+    "Reset Adjustments" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сбросить коррекцию"
+          }
+        }
+      }
+    },
     "Reset Form" : {
       "localizations" : {
         "ru" : {
@@ -7417,12 +8779,32 @@
         }
       }
     },
+    "Rich Text…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RTF…"
+          }
+        }
+      }
+    },
     "Right" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Справа"
+          }
+        }
+      }
+    },
+    "Rotate" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поворот"
           }
         }
       }
@@ -7563,6 +8945,16 @@
         }
       }
     },
+    "Saturation" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Насыщенность"
+          }
+        }
+      }
+    },
     "Save" : {
       "localizations" : {
         "ru" : {
@@ -7633,6 +9025,16 @@
         }
       }
     },
+    "Saved in the PDF with each note, highlight, drawing and signature you add, so anyone you send it to can see it. Leave it empty to add none." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сохраняется в PDF вместе с каждой добавленной Вами заметкой, выделением, рисунком и подписью, поэтому его увидит любой получатель. Оставьте поле пустым, чтобы не добавлять имя."
+          }
+        }
+      }
+    },
     "Saves a protected PDF without its password. The password is needed to do so." : {
       "localizations" : {
         "ru" : {
@@ -7679,6 +9081,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Слева отображаются сканеры, подключённые к этому Mac или доступные по сети."
+          }
+        }
+      }
+    },
+    "Scripts and Actions" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сценарии и действия"
           }
         }
       }
@@ -7803,6 +9215,16 @@
         }
       }
     },
+    "Select text, and it is marked as you let go." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выделите текст — он будет помечен, когда Вы отпустите кнопку."
+          }
+        }
+      }
+    },
     "Select the message in Mail and try again. If macOS asked whether Sheaf may control Mail and the answer was no, allow it in System Settings under Privacy & Security, Automation." : {
       "localizations" : {
         "ru" : {
@@ -7823,12 +9245,32 @@
         }
       }
     },
-    "Select, move and resize fields" : {
+    "Select: text, and the notes and drawings on the page" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Выбор, перемещение и изменение размера полей"
+            "value" : "Выбор: текст, а также заметки и рисунки на странице"
+          }
+        }
+      }
+    },
+    "Selected Text" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выбранный текст"
+          }
+        }
+      }
+    },
+    "Selected text" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выбранный текст"
           }
         }
       }
@@ -7955,12 +9397,32 @@
         }
       }
     },
+    "Shadows" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тени"
+          }
+        }
+      }
+    },
     "Share" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Поделиться"
+          }
+        }
+      }
+    },
+    "Sharpness" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Резкость"
           }
         }
       }
@@ -7975,6 +9437,16 @@
         }
       }
     },
+    "Sheaf and Your Privacy" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sheaf и конфиденциальность"
+          }
+        }
+      }
+    },
     "Sheaf has made every change it knows the standard asks for. If the file is going to an archive that checks, run it through their validator too." : {
       "localizations" : {
         "ru" : {
@@ -7985,42 +9457,32 @@
         }
       }
     },
-    "Show Edit Toolbar" : {
+    "Show" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Показать панель правки"
+            "value" : "Показать"
           }
         }
       }
     },
-    "Show Form Toolbar" : {
+    "Show Options" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Показать панель форм"
+            "value" : "Показать параметры"
           }
         }
       }
     },
-    "Show Inspector" : {
+    "Show Summary" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Показать инспектор"
-          }
-        }
-      }
-    },
-    "Show Markup Toolbar" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Показать панель разметки"
+            "value" : "Показать резюме"
           }
         }
       }
@@ -8045,42 +9507,22 @@
         }
       }
     },
+    "Show Whole Pages" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показать страницы целиком"
+          }
+        }
+      }
+    },
     "Show in Finder" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Показать в Finder"
-          }
-        }
-      }
-    },
-    "Show or hide the Format panel" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Показать или скрыть панель «Формат»"
-          }
-        }
-      }
-    },
-    "Show the marks as they will look once applied" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Показать метки так, как они будут выглядеть после применения"
-          }
-        }
-      }
-    },
-    "Show the markup tools" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Показать инструменты разметки"
           }
         }
       }
@@ -8105,12 +9547,12 @@
         }
       }
     },
-    "Sign" : {
+    "Sign and Stamp" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Подписать"
+            "value" : "Подпись и штамп"
           }
         }
       }
@@ -8141,6 +9583,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Поле подписи"
+          }
+        }
+      }
+    },
+    "Signatures" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подписи"
           }
         }
       }
@@ -8305,12 +9757,32 @@
         }
       }
     },
+    "Stamps" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Штампы"
+          }
+        }
+      }
+    },
     "Starts With" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Начальное значение"
+          }
+        }
+      }
+    },
+    "Starts at %lld" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Начинается с %lld"
           }
         }
       }
@@ -8331,6 +9803,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Остановить"
+          }
+        }
+      }
+    },
+    "Stop Reading Out Loud" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Остановить чтение вслух"
+          }
+        }
+      }
+    },
+    "Stop answering" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Остановить ответ"
           }
         }
       }
@@ -8375,6 +9867,146 @@
         }
       }
     },
+    "Suggest" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Предложить"
+          }
+        }
+      }
+    },
+    "Sum the document up and ask about it, with Apple Intelligence" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Резюме документа и вопросы по нему с помощью Apple Intelligence"
+          }
+        }
+      }
+    },
+    "Summaries and answers" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Резюме и ответы"
+          }
+        }
+      }
+    },
+    "Summarize" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Составить резюме"
+          }
+        }
+      }
+    },
+    "Summarize ${file} as ${kind}" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Составить для ${file}: ${kind}"
+          }
+        }
+      }
+    },
+    "Summarize PDF" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Составить резюме PDF"
+          }
+        }
+      }
+    },
+    "Summary" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Резюме"
+          }
+        }
+      }
+    },
+    "Summary by Apple Intelligence" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Резюме от Apple Intelligence"
+          }
+        }
+      }
+    },
+    "Sums up what a PDF says, with Apple Intelligence on this Mac. A scanned PDF has to have its text recognized first." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Составляет резюме PDF с помощью Apple Intelligence на этом Mac. В отсканированном PDF сначала нужно распознать текст."
+          }
+        }
+      }
+    },
+    "Super Resolution" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сверхвысокое разрешение"
+          }
+        }
+      }
+    },
+    "Super Resolution could not be downloaded. %@" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось загрузить «Сверхвысокое разрешение». %@"
+          }
+        }
+      }
+    },
+    "Super Resolution could not work on this picture." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось применить «Сверхвысокое разрешение» к этому изображению."
+          }
+        }
+      }
+    },
+    "Super Resolution is still being downloaded. Try again in a while." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«Сверхвысокое разрешение» ещё загружается. Повторите попытку позже."
+          }
+        }
+      }
+    },
+    "Super Resolution works on pictures without see-through parts." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«Сверхвысокое разрешение» работает с изображениями без прозрачных участков."
+          }
+        }
+      }
+    },
     "Swap Sides" : {
       "localizations" : {
         "ru" : {
@@ -8415,12 +10047,42 @@
         }
       }
     },
+    "Take the editing tool from the strip at the side, then double-click any paragraph to type in it. Pictures can be moved and resized too." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Возьмите инструмент правки на полосе сбоку, затем дважды нажмите на любой абзац, чтобы печатать в нём. Изображения тоже можно перемещать и менять в размере."
+          }
+        }
+      }
+    },
+    "Temperature" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Температура"
+          }
+        }
+      }
+    },
     "Text" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Текст"
+          }
+        }
+      }
+    },
+    "Text Box" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Текстовое поле"
           }
         }
       }
@@ -8577,22 +10239,42 @@
         }
       }
     },
-    "The app that opens a PDF when you double-click it in the Finder." : {
+    "The app that opens each kind of file when you double-click it in the Finder. Sheaf opens a picture as a one-page document. macOS may ask you to confirm each change." : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Приложение, в котором открывается PDF при двойном нажатии в Finder."
+            "value" : "Приложение, которое открывает файлы каждого вида при двойном нажатии в Finder. Sheaf открывает изображение как документ из одной страницы. macOS может попросить подтвердить каждое изменение."
           }
         }
       }
     },
-    "The default PDF app could not be changed." : {
+    "The author, title, keywords, dates, and the apps the document was made with." : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Не удалось изменить приложение для PDF по умолчанию."
+            "value" : "Автор, заголовок, ключевые слова, даты и программы, в которых сделан документ."
+          }
+        }
+      }
+    },
+    "The color goes under everything on the page. Scanned pages are pictures that cover the whole page, so on them it does not show." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Цвет ложится под всё, что есть на странице. Отсканированные страницы — это изображения во всю страницу, поэтому на них его не видно."
+          }
+        }
+      }
+    },
+    "The default app could not be changed." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось изменить приложение по умолчанию."
           }
         }
       }
@@ -8627,12 +10309,42 @@
         }
       }
     },
+    "The document does not seem to say." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В документе об этом, похоже, не сказано."
+          }
+        }
+      }
+    },
     "The document is encrypted with AES 256-bit. There is no way to recover a forgotten password." : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Документ шифруется по алгоритму AES с 256-битным ключом. Восстановить забытый пароль невозможно."
+          }
+        }
+      }
+    },
+    "The document is written out afresh, so what is removed, and anything deleted from it earlier, is gone from the file and not just hidden. Undo brings it back until the document is closed. Text under redaction marks is not touched here: use Redact for that." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Документ записывается заново, поэтому удалённое, а также всё, что было удалено из него раньше, исчезает из файла, а не просто скрывается. Отмена возвращает его, пока документ не закрыт. Текст под пометками для скрытия здесь не затрагивается: для этого используйте «Вымарать»."
+          }
+        }
+      }
+    },
+    "The document's table of contents." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Оглавление документа."
           }
         }
       }
@@ -8677,6 +10389,16 @@
         }
       }
     },
+    "The key to your saved signatures is missing from the Keychain." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ключа к сохранённым подписям нет в Связке ключей."
+          }
+        }
+      }
+    },
     "The later version" : {
       "localizations" : {
         "ru" : {
@@ -8687,12 +10409,32 @@
         }
       }
     },
-    "The markup tools add notes, shapes, stamps and your signature on top of the pages." : {
+    "The limit is close." : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Инструменты разметки добавляют заметки, фигуры, штампы и вашу подпись поверх страниц."
+            "value" : "Лимит почти исчерпан."
+          }
+        }
+      }
+    },
+    "The limit is reached for now." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Лимит пока исчерпан."
+          }
+        }
+      }
+    },
+    "The limit is reached until %@." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Лимит исчерпан до %@."
           }
         }
       }
@@ -8817,6 +10559,26 @@
         }
       }
     },
+    "The text in paragraphs with its fonts, sizes and colors, as a page for a browser. Pictures are left out." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Текст по абзацам со шрифтами, размерами и цветами, в виде страницы для браузера. Изображения не переносятся."
+          }
+        }
+      }
+    },
+    "The text in paragraphs with its fonts, sizes and colors, for TextEdit, Pages and other word processors. Pictures are left out." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Текст по абзацам со шрифтами, размерами и цветами, для TextEdit, Pages и других текстовых редакторов. Изображения не переносятся."
+          }
+        }
+      }
+    },
     "The text is carried over in paragraphs with its fonts, sizes, colors and pictures, on pages of the same size. Columns, tables and exact positions are not, so expect to tidy the result." : {
       "localizations" : {
         "ru" : {
@@ -8837,12 +10599,42 @@
         }
       }
     },
+    "The tools at the side of the pages add highlights, notes, shapes, stamps and your signature on top of them. Click a tool again for its options." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Инструменты сбоку от страниц добавляют выделения, заметки, фигуры, штампы и Вашу подпись поверх страниц. Нажмите на инструмент ещё раз, чтобы увидеть его параметры."
+          }
+        }
+      }
+    },
     "The two documents read and look the same." : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Оба документа читаются и выглядят одинаково."
+          }
+        }
+      }
+    },
+    "There is no text to read from this page on. If the pages are scans, use Recognize Text first." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Начиная с этой страницы, читать нечего. Если страницы отсканированы, сначала распознайте текст."
+          }
+        }
+      }
+    },
+    "There is no text to read here. A scanned page has to have its text recognized first." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Здесь нет текста. На отсканированной странице сначала нужно распознать текст."
           }
         }
       }
@@ -8887,12 +10679,52 @@
         }
       }
     },
+    "Thickness" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Толщина"
+          }
+        }
+      }
+    },
     "This Button's Value" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Значение этой кнопки"
+          }
+        }
+      }
+    },
+    "This Mac does not support Apple Intelligence." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Этот Mac не поддерживает Apple Intelligence."
+          }
+        }
+      }
+    },
+    "This Mac does not support Super Resolution." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Этот Mac не поддерживает «Сверхвысокое разрешение»."
+          }
+        }
+      }
+    },
+    "This Page" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Эта страница"
           }
         }
       }
@@ -8927,12 +10759,42 @@
         }
       }
     },
+    "This page has nothing on it to crop to." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "На этой странице нет ничего, по чему можно обрезать."
+          }
+        }
+      }
+    },
+    "This picture already has plenty of pixels. Super Resolution is for pictures up to 1920 pixels on a side." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В этом изображении уже достаточно пикселей. «Сверхвысокое разрешение» рассчитано на изображения до 1920 пикселей по стороне."
+          }
+        }
+      }
+    },
     "This picture is slanted or is part of a repeated element, so it cannot be changed here." : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Это изображение скошено или входит в повторяющийся элемент, поэтому изменить его здесь нельзя."
+          }
+        }
+      }
+    },
+    "This picture is too small for Super Resolution." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Это изображение слишком мало для «Сверхвысокого разрешения»."
           }
         }
       }
@@ -8953,6 +10815,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Миниатюры"
+          }
+        }
+      }
+    },
+    "Tint" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Оттенок"
           }
         }
       }
@@ -8983,6 +10855,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Инструменты"
+          }
+        }
+      }
+    },
+    "Tools for the whole document: reduce its size, set a password, recognize text, convert, compare" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Инструменты для всего документа: уменьшить размер, задать пароль, распознать текст, преобразовать, сравнить"
           }
         }
       }
@@ -9023,6 +10905,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Поворот"
+          }
+        }
+      }
+    },
+    "Turn on Apple Intelligence in System Settings to use this." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Чтобы пользоваться этим, включите Apple Intelligence в Системных настройках."
           }
         }
       }
@@ -9117,6 +11009,16 @@
         }
       }
     },
+    "Undo (⌘Z)" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отменить (⌘Z)"
+          }
+        }
+      }
+    },
     "Unlock" : {
       "localizations" : {
         "ru" : {
@@ -9193,6 +11095,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Используется для всех защищённых PDF."
+          }
+        }
+      }
+    },
+    "Used if the PDF is protected." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Используется, если PDF защищён."
           }
         }
       }
@@ -9277,6 +11189,16 @@
         }
       }
     },
+    "Web Page…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Веб-страница…"
+          }
+        }
+      }
+    },
     "Welcome to Sheaf" : {
       "localizations" : {
         "ru" : {
@@ -9293,6 +11215,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Заполненное станет частью страниц. Поля будут удалены, и изменить их будет нельзя."
+          }
+        }
+      }
+    },
+    "What the app that made the document keeps for itself, and stored page thumbnails." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "То, что программа, создавшая документ, хранит для себя, и сохранённые миниатюры страниц."
           }
         }
       }
@@ -9317,12 +11249,32 @@
         }
       }
     },
+    "Whole Document" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Весь документ"
+          }
+        }
+      }
+    },
     "Whole Words" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Слова целиком"
+          }
+        }
+      }
+    },
+    "Whole document" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Весь документ"
           }
         }
       }
@@ -9377,6 +11329,26 @@
         }
       }
     },
+    "Writing Tools, Image Playground and what is done to pictures follow Apple Intelligence in System Settings, not this choice." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Инструменты для письма, Image Playground и операции с изображениями подчиняются настройкам Apple Intelligence в Системных настройках, а не этому выбору."
+          }
+        }
+      }
+    },
+    "Writing…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Составление…"
+          }
+        }
+      }
+    },
     "Wrote the metadata the standard asks for" : {
       "localizations" : {
         "ru" : {
@@ -9403,6 +11375,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Y"
+          }
+        }
+      }
+    },
+    "Your saved signatures could not be read. %@" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось прочитать сохранённые подписи. %@"
+          }
+        }
+      }
+    },
+    "Your signatures could not be saved. %@" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось сохранить подписи. %@"
           }
         }
       }
@@ -9443,6 +11435,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "macOS не разрешила это (%@). Чтобы изменить вручную, выберите PDF в Finder, выберите «Файл» > «Свойства», укажите приложение в разделе «Открывать в приложении» и нажмите «Настроить»."
+          }
+        }
+      }
+    },
+    "macOS downloads what Super Resolution needs from Apple once. After that it works on this Mac, without the internet." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS один раз загрузит от Apple то, что нужно для «Сверхвысокого разрешения». После этого оно работает на этом Mac без интернета."
           }
         }
       }

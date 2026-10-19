@@ -72,6 +72,48 @@ yours to approve. To switch it on:
 `Sheaf/App/Updater.swift` needs no change: it compiles its Sparkle code only when the
 package is there.
 
+## Private Cloud Compute
+
+Settings ▸ Intelligence offers Private Cloud Compute for summaries and answers only in a
+copy of Sheaf that holds the entitlement `com.apple.developer.private-cloud-compute`.
+Apple manages it: without it macOS refuses the request ("Operation not permitted"), and a
+build signed with a development certificate is stopped by the framework with "Missing
+entitlement". Sheaf checks for it and sends nothing without it.
+
+1. Sign in to the developer account and ask for it at
+   <https://developer.apple.com/contact/request/private-cloud-compute/>. Apple lists
+   eligibility requirements there.
+2. Once granted, turn the capability on for the App ID `com.valeryburtsev.Sheaf`, and make
+   provisioning profiles that carry it: a development one, and a Developer ID one for
+   releases. A managed entitlement only counts when a profile in the app vouches for it.
+3. Add `<key>com.apple.developer.private-cloud-compute</key><true/>` to
+   `Sheaf/Resources/Sheaf.entitlements`, and set `DEVELOPMENT_TEAM`, the signing identity
+   and the profile in `project.yml`. With "Sign to Run Locally" the key must stay out:
+   an ad hoc signed app that claims a managed entitlement does not launch.
+4. The choice then shows by itself in Settings (a new Intelligence pane) and at the
+   bottom of the Summary panel; both are hidden without the entitlement. Put a section
+   about it back into the help page (`Scripts/make-help.py`, "intelligence"), and say in
+   the "Summarize PDF" action's description that it follows the setting.
+5. Then try it: `-SnapshotAssistant cloud,summary` should print `by cloud`. Nothing past
+   this point has run against the real service, so expect to adjust the size of the parts
+   (`Reader.inputTokens`) and the prompts.
+
+## Mac App Store
+
+Not set up yet (2026-10-14). Decided so far:
+
+- The privacy manifest is `Sheaf/Resources/PrivacyInfo.xcprivacy`: no tracking, no data
+  collected, and reasons for UserDefaults, system uptime and file creation dates. Check it
+  whenever code starts using another API from Apple's "required reason" list.
+- Reply to Sender keeps its Mail permission (`com.apple.security.temporary-exception.apple-events`)
+  in the first submission, explained in the review notes: the person chooses Reply, Sheaf
+  reads only the message the PDF came from, to quote it in a draft, and sends nothing.
+  Only if App Review rejects it does the App Store build fall back to New Mail Message.
+- Sparkle stays out of the App Store build.
+- Still to do: team and Apple Distribution signing, a Mac App Store provisioning profile,
+  an archive exported for App Store Connect, the App Store Connect record, a public
+  privacy policy URL, support URL, screenshots, age rating, and the export compliance answer.
+
 ## The Help Book and translations
 
 - `Scripts/make-help.py` holds every help page and writes `Sheaf/Resources/Sheaf.help`.

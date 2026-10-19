@@ -10,6 +10,17 @@ out="$1"; shift
 mkdir -p "$out"
 app="$(pwd)/build/Build/Products/Debug/Sheaf.app"
 rm -f "$out"/*.png "$out/snapshot.log"
+# The app saves edits in place when it quits, so it only ever gets copies of the files
+# given, never the files themselves.
+rm -rf "$out/input"
+if [ "$#" -gt 0 ]; then
+    mkdir -p "$out/input"
+    for file in "$@"; do
+        cp "$file" "$out/input/"
+        set -- "$@" "$out/input/$(basename "$file")"
+        shift
+    done
+fi
 # Through Launch Services, so the sandbox is granted access to the files.
 open -n -W --stdout "$out/snapshot.log" -a "$app" "$@" \
     --args -SnapshotWindows ${SNAPSHOT_DELAY:-3} -SnapshotQuits YES -ApplePersistenceIgnoreState YES ${SNAPSHOT_ARGS:-}

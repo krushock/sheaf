@@ -319,6 +319,23 @@ import UniformTypeIdentifiers
         #expect(try editor.restack(annotation: lower, onPageAt: 0, .toBack))
         #expect(try editor.annotations(onPageAt: 0).map(\.objectID) == [lower, upper, apart])
     }
+
+    @Test func aGeneratedPictureSaysSoInItsMetadata() throws {
+        var editor = try blankPage()
+        try editor.addImage(try picture(red), toPageAt: 0, in: PDFRectangle(x: 50, y: 50, width: 200, height: 100), generatedBy: "Image Playground")
+        try editor.addImage(try picture(blue), toPageAt: 0, in: PDFRectangle(x: 50, y: 200, width: 200, height: 100))
+        let saved = try editor.rewritten()
+        let text = String(decoding: saved, as: UTF8.self)
+        // Once, for the one picture a model made, and readable as it is.
+        #expect(text.components(separatedBy: "digitalsourcetype/trainedAlgorithmicMedia").count == 2)
+        #expect(text.contains("<xmp:CreatorTool>Image Playground</xmp:CreatorTool>"))
+        // It stays with the picture through another save.
+        var again = try PDFEditor(PDFFile(data: saved))
+        try again.addImage(try picture(green), toPageAt: 0, in: PDFRectangle(x: 50, y: 320, width: 40, height: 20))
+        #expect(String(decoding: try again.rewritten(), as: UTF8.self).contains("trainedAlgorithmicMedia"))
+        // And the page still shows both pictures.
+        #expect(try editor.pageContent(at: 0).images.count == 2)
+    }
 }
 
 extension CorpusTests {

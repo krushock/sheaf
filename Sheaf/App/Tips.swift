@@ -4,7 +4,7 @@ import TipKit
 /// Points out that the words on a page can be changed, which is not what most PDF apps do.
 struct EditTip: Tip {
     var title: Text { Text("Change the Words Themselves") }
-    var message: Text? { Text("Click Edit, then double-click any paragraph to type in it. Pictures can be moved and resized too.") }
+    var message: Text? { Text("Take the editing tool from the strip at the side, then double-click any paragraph to type in it. Pictures can be moved and resized too.") }
     var image: Image? { Image(systemName: "character.cursor.ibeam") }
 }
 
@@ -16,7 +16,7 @@ struct OrganizeTip: Tip {
 
 struct MarkupTip: Tip {
     var title: Text { Text("Highlight, Comment and Sign") }
-    var message: Text? { Text("The markup tools add notes, shapes, stamps and your signature on top of the pages.") }
+    var message: Text? { Text("The tools at the side of the pages add highlights, notes, shapes, stamps and your signature on top of them. Click a tool again for its options.") }
     var image: Image? { Image(systemName: "pencil.tip.crop.circle") }
 }
 

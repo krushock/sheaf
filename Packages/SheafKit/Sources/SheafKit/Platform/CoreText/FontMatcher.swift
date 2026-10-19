@@ -88,6 +88,19 @@ public enum FontMatcher {
         return normalized(CTFontCopyPostScriptName(font) as String) == wanted || normalized(CTFontCopyFullName(font) as String) == wanted
     }
 
+    /// The member of an installed font's family that is bold or not, italic or not, as
+    /// asked. `nil` keeps that side as the font has it. The font itself when its family
+    /// has no such member.
+    public static func styled(_ fontName: String, bold: Bool?, italic: Bool?) -> String {
+        let font = CTFontCreateWithName(fontName as CFString, 12, nil)
+        let symbolic = CTFontGetSymbolicTraits(font)
+        let traits = Traits(
+            isBold: bold ?? symbolic.contains(.traitBold), isItalic: italic ?? symbolic.contains(.traitItalic),
+            isFixedPitch: symbolic.contains(.traitMonoSpace)
+        )
+        return member(ofFamily: familyName(of: fontName), traits: traits) ?? fontName
+    }
+
     private static func member(ofFamily family: String, traits: Traits) -> String? {
         var symbolic: CTFontSymbolicTraits = []
         if traits.isBold { symbolic.insert(.traitBold) }

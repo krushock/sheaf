@@ -153,6 +153,16 @@ public struct PDFEditor: ObjectSource {
         try update(id) { $0["CropBox"] = clipped.object }
     }
 
+    /// Trims a page by distances from its edges as displayed, so that the top is the top
+    /// however the page is turned.
+    public mutating func cropPage(at index: Int, top: Double, left: Double, bottom: Double, right: Double) throws {
+        let geometry = try geometry(ofPageAt: index)
+        let size = geometry.displaySize
+        let width = size.width - left - right, height = size.height - top - bottom
+        guard width >= 1, height >= 1 else { throw SheafError.unsupported("cropping away the whole page") }
+        try setCropBox(geometry.pageRect(PDFRectangle(x: left, y: bottom, width: width, height: height)), forPageAt: index)
+    }
+
     /// Puts the pages in a new order. `order[i]` is the current index of the page that
     /// will be at position `i`. Leaving an index out removes that page; repeating one is an error.
     ///

@@ -8,6 +8,8 @@ struct DocumentInfoSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var info = DocumentInfo()
     @State private var original = DocumentInfo()
+    @State private var isSuggesting = false
+    @State private var suggestionFailure: String?
 
     var body: some View {
         Form {
@@ -17,6 +19,22 @@ struct DocumentInfoSheet: View {
                 TextField("Subject", text: text(\.subject))
                 TextField("Keywords", text: text(\.keywords), axis: .vertical)
                     .lineLimit(1...3)
+                if DocumentReader.isAvailable {
+                    // Apple Intelligence reads how the document starts and fills in what is empty.
+                    HStack {
+                        Button("Suggest") { suggest() }
+                            .disabled(isSuggesting)
+                            .help("Have Apple Intelligence suggest a title, a subject and keywords from the document's text")
+                        if isSuggesting { ProgressView().controlSize(.small) }
+                        Spacer()
+                        if let suggestionFailure {
+                            Text(suggestionFailure)
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+                    }
+                }
             }
             .disabled(!viewer.canEditPages)
 
@@ -91,6 +109,26 @@ struct DocumentInfoSheet: View {
         case .aes128: return String(localized: "Password, AES 128-bit")
         case .rc4(let bits): return String(localized: "Password, RC4 \(bits)-bit")
         case nil: return String(localized: "Password")
+        }
+    }
+
+    /// Fills the title, subject and keywords with what Apple Intelligence makes of the
+    /// document, leaving alone what is filled in already. Nothing is saved until Save.
+    private func suggest() {
+        isSuggesting = true
+        suggestionFailure = nil
+        Task {
+            defer { isSuggesting = false }
+            do {
+                let pages = await viewer.assistant.pages(of: viewer)
+                let suggested = try await DocumentReader.suggestInfo(for: pages)
+                if (info.title ?? "").isEmpty, !suggested.title.isEmpty { info.title = suggested.title }
+                if (info.subject ?? "").isEmpty, !suggested.subject.isEmpty { info.subject = suggested.subject }
+                if (info.keywords ?? "").isEmpty, !suggested.keywords.isEmpty { info.keywords = suggested.keywords.joined(separator: ", ") }
+                if info == original { suggestionFailure = String(localized: "Empty a field to have it suggested.") }
+            } catch {
+                suggestionFailure = error.localizedDescription
+            }
         }
     }
 

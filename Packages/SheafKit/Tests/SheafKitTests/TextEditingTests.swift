@@ -288,4 +288,174 @@ import Testing
         #expect(wide.lines.count == 3 && abs(wide.frame.x - left) < 0.5 && abs(wide.frame.width - block.frame.width) < 2)
         #expect(normalized(try Reference(editor.serialized()).texts[0]).contains(words))
     }
+
+    @Test func aParagraphCanBeCenteredAndRightAligned() throws {
+        var editor = PDFEditor(try PDFFile(data: Fixture.text3Pages.data))
+        let block = try paragraph(editor)
+        let words = normalized(block.text)
+        let middle = block.frame.x + block.frame.width / 2, right = block.frame.x + block.frame.width
+        try editor.replaceText(ofBlock: block.id, onPageAt: 0, with: block.flowingText, restyle: TextRestyle(alignment: .center))
+        var centered = try #require(try editor.pageContent(at: 0).blocks.first { normalized($0.text) == words })
+        #expect(centered.lines.allSatisfy { abs($0.frame.x + $0.frame.width / 2 - middle) < 1 })
+        #expect(centered.alignment == .center)
+        // Set again for another reason, it stays centered.
+        try editor.replaceText(ofBlock: centered.id, onPageAt: 0, with: centered.flowingText, restyle: TextRestyle(isBold: true))
+        centered = try #require(try editor.pageContent(at: 0).blocks.first { normalized($0.text) == words })
+        #expect(centered.alignment == .center)
+        #expect(centered.lines.allSatisfy { abs($0.frame.x + $0.frame.width / 2 - middle) < 1 })
+        try editor.replaceText(ofBlock: centered.id, onPageAt: 0, with: centered.flowingText, restyle: TextRestyle(alignment: .right))
+        let flushRight = try #require(try editor.pageContent(at: 0).blocks.first { normalized($0.text) == words })
+        #expect(flushRight.lines.allSatisfy { abs($0.frame.x + $0.frame.width - right) < 1 })
+        try editor.replaceText(ofBlock: flushRight.id, onPageAt: 0, with: flushRight.flowingText, restyle: TextRestyle(alignment: .left))
+        let back = try #require(try editor.pageContent(at: 0).blocks.first { normalized($0.text) == words })
+        #expect(back.lines.allSatisfy { abs($0.frame.x - block.frame.x) < 0.5 })
+    }
+
+    @Test func aSingleLineIsCenteredOnThePageAndStaysThere() throws {
+        var editor = PDFEditor(try PDFFile(data: Fixture.text3Pages.data))
+        let heading = try #require(try editor.pageContent(at: 0).blocks.first { $0.lines.count == 1 && $0.isEditable })
+        let column = try editor.pageContent(at: 0).column
+        try editor.replaceText(ofBlock: heading.id, onPageAt: 0, with: heading.flowingText, restyle: TextRestyle(alignment: .center))
+        let once = try #require(try editor.pageContent(at: 0).blocks.first { $0.text == heading.text })
+        #expect(abs(once.frame.x + once.frame.width / 2 - (column.left + column.right) / 2) < 1)
+        // Centering it again leaves it where it is.
+        try editor.replaceText(ofBlock: once.id, onPageAt: 0, with: once.flowingText, restyle: TextRestyle(alignment: .center))
+        let twice = try #require(try editor.pageContent(at: 0).blocks.first { $0.text == heading.text })
+        #expect(abs(twice.frame.x - once.frame.x) < 0.5)
+    }
+
+    @Test func lineSpacingAndBoldnessCanBeChanged() throws {
+        var editor = PDFEditor(try PDFFile(data: Fixture.text3Pages.data))
+        let block = try paragraph(editor)
+        let words = normalized(block.text)
+        let spacing = block.leading * 1.3
+        try editor.replaceText(ofBlock: block.id, onPageAt: 0, with: block.flowingText, restyle: TextRestyle(leading: spacing))
+        let spaced = try #require(try editor.pageContent(at: 0).blocks.first { normalized($0.text) == words })
+        #expect(abs(spaced.leading - spacing) < 0.5)
+        #expect(abs(spaced.lines[0].baseline - block.lines[0].baseline) < 0.5)
+        try editor.replaceText(ofBlock: spaced.id, onPageAt: 0, with: spaced.flowingText, restyle: TextRestyle(isBold: true))
+        let bold = try #require(try editor.pageContent(at: 0).blocks.first { normalized($0.text) == words })
+        let allBold = bold.lines.flatMap(\.glyphs).filter { $0.text != " " }.allSatisfy { $0.isBold }
+        #expect(allBold)
+        #expect(abs(bold.leading - spacing) < 0.5)
+    }
+
+    @Test func aStyledFontIsItsFamilysMember() {
+        #expect(FontMatcher.styled("Helvetica", bold: true, italic: nil) == "Helvetica-Bold")
+        #expect(FontMatcher.styled("Helvetica-Bold", bold: false, italic: true) == "Helvetica-Oblique")
+        #expect(FontMatcher.styled("TimesNewRomanPSMT", bold: true, italic: true) == "TimesNewRomanPS-BoldItalicMT")
+    }
+}
+
+/// Subset fonts that give widths to codes whose glyphs they left out, as pdfTeX does.
+@Suite struct SubsetGlyphTests {
+    /// A Type 1 program whose encrypted part has CharStrings for the given glyphs only.
+    private func type1Program(glyphs: [String], hex: Bool) -> Data {
+        var secret = Data([0x11, 0x22, 0x33, 0x44])  // four bytes the cipher starts with
+        secret.append(Data("dup /Private 8 dict dup begin /RD{string currentfile exch readstring pop}executeonly def\n".utf8))
+        secret.append(Data("2 index /CharStrings \(glyphs.count) dict dup begin\n".utf8))
+        for name in glyphs {
+            // Glyph bytes that look like more glyphs, to see that they are skipped.
+            let bytes = Data("/fake 3 RD x".utf8)
+            secret.append(Data("/\(name) \(bytes.count) RD ".utf8) + bytes + Data(" ND\n".utf8))
+        }
+        secret.append(Data("end\nend\nmark currentfile closefile\n".utf8))
+        var key: UInt16 = 55665
+        var cipher = Data()
+        for byte in secret {
+            let encrypted = byte ^ UInt8(key >> 8)
+            cipher.append(encrypted)
+            key = (UInt16(encrypted) &+ key) &* 52845 &+ 22719
+        }
+        var program = Data("%!PS-AdobeFont-1.0: CMSS10\n/FontName /ABCDEF+CMSS10 def\ncurrentfile eexec\n".utf8)
+        program.append(hex ? Data(cipher.map { String(format: "%02X", $0) }.joined().utf8) : cipher)
+        return program
+    }
+
+    private func font(glyphs: [String], hex: Bool = false, charSet: String? = nil) throws -> PageFont {
+        let program = type1Program(glyphs: glyphs, hex: hex)
+        // Widths for every code from space to tilde, as pdfTeX writes them.
+        let widths = (32...126).map { _ in "500" }.joined(separator: " ")
+        var body = Data("%PDF-1.4\n".utf8)
+        var offsets: [Int] = []
+        func object(_ text: Data) {
+            offsets.append(body.count)
+            body.append(Data("\(offsets.count) 0 obj\n".utf8) + text + Data("\nendobj\n".utf8))
+        }
+        object(Data("<< /Type /Catalog /Pages 2 0 R >>".utf8))
+        object(Data("<< /Type /Pages /Kids [] /Count 0 >>".utf8))
+        object(Data("<< /Type /Font /Subtype /Type1 /BaseFont /ABCDEF+CMSS10 /FirstChar 32 /LastChar 126 /Widths [\(widths)] /FontDescriptor 4 0 R >>".utf8))
+        let set = charSet.map { " /CharSet (\($0))" } ?? ""
+        object(Data("<< /Type /FontDescriptor /FontName /ABCDEF+CMSS10 /Flags 4 /FontFile 5 0 R\(set) >>".utf8))
+        object(Data("<< /Length \(program.count) /Length1 70 /Length2 \(program.count - 70) /Length3 0 >>\nstream\n".utf8) + program + Data("\nendstream".utf8))
+        var xref = "xref\n0 \(offsets.count + 1)\n0000000000 65535 f \n"
+        for offset in offsets { xref += String(format: "%010d 00000 n \n", offset) }
+        body.append(Data((xref + "trailer\n<< /Size \(offsets.count + 1) /Root 1 0 R >>\nstartxref\n\(body.count)\n%%EOF\n").utf8))
+        let file = try PDFFile(data: body)
+        let dictionary = try #require(try file.object(ObjectID(3)).dictionaryValue)
+        return try PageFont(dictionary: dictionary, source: file)
+    }
+
+    @Test func onlyGlyphsTheProgramCarriesAreOffered() throws {
+        for hex in [false, true] {
+            let font = try font(glyphs: ["M", "o", "d", "u", "l", "e", "one", "four"], hex: hex)
+            #expect(font.code(for: "M") != nil)
+            #expect(font.code(for: "4") != nil)
+            // Given a width, but not in the program: written with this font, they would not show.
+            #expect(font.code(for: "5") == nil)
+            #expect(font.code(for: "j") == nil)
+            #expect(font.code(for: "fake") == nil)
+        }
+    }
+
+    /// A page that shows two lines in the subset font, the second written, as an earlier
+    /// edit did, with codes for glyphs the font does not carry.
+    private func pageWithUnseenLine() throws -> Data {
+        let program = type1Program(glyphs: ["M", "o", "d", "u", "l", "e", "one", "four", "space"], hex: false)
+        let widths = (32...126).map { _ in "500" }.joined(separator: " ")
+        let content = "BT /F1 20 Tf 100 700 Td (Module 14) Tj 0 -26 Td (5555) Tj ET"
+        var body = Data("%PDF-1.4\n".utf8)
+        var offsets: [Int] = []
+        func object(_ text: Data) {
+            offsets.append(body.count)
+            body.append(Data("\(offsets.count) 0 obj\n".utf8) + text + Data("\nendobj\n".utf8))
+        }
+        object(Data("<< /Type /Catalog /Pages 2 0 R >>".utf8))
+        object(Data("<< /Type /Pages /Kids [3 0 R] /Count 1 >>".utf8))
+        object(Data("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>".utf8))
+        object(Data("<< /Length \(content.utf8.count) >>\nstream\n\(content)\nendstream".utf8))
+        object(Data("<< /Type /Font /Subtype /Type1 /BaseFont /ABCDEF+CMSS10 /FirstChar 32 /LastChar 126 /Widths [\(widths)] /Encoding /WinAnsiEncoding /FontDescriptor 6 0 R >>".utf8))
+        object(Data("<< /Type /FontDescriptor /FontName /ABCDEF+CMSS10 /Flags 32 /FontFile 7 0 R >>".utf8))
+        object(Data("<< /Length \(program.count) >>\nstream\n".utf8) + program + Data("\nendstream".utf8))
+        var xref = "xref\n0 \(offsets.count + 1)\n0000000000 65535 f \n"
+        for offset in offsets { xref += String(format: "%010d 00000 n \n", offset) }
+        body.append(Data((xref + "trailer\n<< /Size \(offsets.count + 1) /Root 1 0 R >>\nstartxref\n\(body.count)\n%%EOF\n").utf8))
+        return body
+    }
+
+    @Test func linesThatDrawNothingAreSetAgainOnTheNextEdit() throws {
+        var editor = PDFEditor(try PDFFile(data: try pageWithUnseenLine()))
+        let block = try #require(try editor.pageContent(at: 0).blocks.first { $0.flowingText.contains("Module") })
+        #expect(block.flowingText.contains("5555"))
+        // An edit to the first line only.
+        try editor.replaceText(ofBlock: block.id, onPageAt: 0, with: block.flowingText.replacingOccurrences(of: "Module 14", with: "Module 41"))
+        let after = try editor.pageContent(at: 0)
+        let glyphs = after.blocks.flatMap { $0.lines.flatMap(\.glyphs) }
+        let fives = glyphs.filter { $0.text == "5" }
+        #expect(fives.count == 4)
+        // The fives are now in a font that has them, the rest still in the document's.
+        #expect(fives.allSatisfy { !$0.fontName.contains("CMSS10") })
+        #expect(glyphs.filter { $0.text == "M" }.allSatisfy { $0.fontName.contains("CMSS10") })
+    }
+
+    @Test func theCharSetIsTakenWhenThereIsOne() throws {
+        let font = try font(glyphs: ["M", "j", "five"], charSet: "/M/o")
+        #expect(font.code(for: "o") != nil)
+        #expect(font.code(for: "j") == nil)
+    }
+
+    @Test func aProgramThatCannotBeReadChangesNothing() throws {
+        #expect(Type1Program.glyphNames(in: Data("not a font".utf8)) == nil)
+        #expect(Type1Program.glyphNames(in: type1Program(glyphs: ["A", "five"], hex: false)) == ["A", "five"])
+    }
 }

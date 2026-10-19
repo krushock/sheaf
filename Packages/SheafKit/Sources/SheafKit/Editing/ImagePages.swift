@@ -46,8 +46,15 @@ extension PDFEditor {
 extension PDFEditor {
     /// Stores a picture file in the document as an image object, with its mask and color
     /// profile if it has them.
-    mutating func addImageObject(_ data: Data) throws -> (id: ObjectID, image: PDFImage) {
+    /// - Parameter generatedBy: The tool that made the picture, when a generative model
+    ///   did: the picture then carries metadata saying so, which survives the file being
+    ///   saved again, since the picture is written once and only referred to after.
+    mutating func addImageObject(_ data: Data, generatedBy tool: String? = nil) throws -> (id: ObjectID, image: PDFImage) {
         var image = try ImageReader.read(data)
+        if let tool {
+            let metadata = PDFStream(dictionary: ["Type": .name("Metadata"), "Subtype": .name("XML")], data: XMP.generatedImage(by: tool))
+            image.stream.dictionary["Metadata"] = .reference(add(.stream(metadata)))
+        }
         if let mask = image.mask { image.stream.dictionary["SMask"] = .reference(add(.stream(mask))) }
         if let profile = image.profile {
             let stream = PDFStream(

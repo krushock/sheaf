@@ -210,10 +210,12 @@ extension PDFEditor {
     ///   inside it, keeping its proportions. `nil` centers it at its natural size, scaled
     ///   down if it would not fit the page.
     /// - Returns: The frame the picture ended up with.
+    /// - Parameter tool: For a picture a generative model made, the tool's name, which the
+    ///   picture then carries as metadata (see `addImageObject`).
     @discardableResult
-    public mutating func addImage(_ data: Data, toPageAt index: Int, in frame: PDFRectangle? = nil) throws -> PDFRectangle {
+    public mutating func addImage(_ data: Data, toPageAt index: Int, in frame: PDFRectangle? = nil, generatedBy tool: String? = nil) throws -> PDFRectangle {
         let interpretation = try interpret(pageAt: index)
-        let (object, image) = try addImageObject(data)
+        let (object, image) = try addImageObject(data, generatedBy: tool)
         let name = PDFName("SheafIm\(object.number)")
         let upright = image.uprightSize
         let page = interpretation.geometry.displaySize

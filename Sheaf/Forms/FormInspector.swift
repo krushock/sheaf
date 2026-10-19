@@ -77,7 +77,7 @@ struct FormInspector: View {
             }
 
             Section {
-                Button("Delete Field", role: .destructive) { viewer.deleteSelection() }
+                ActionRow("Delete Field", systemImage: "trash", role: .destructive) { viewer.deleteSelection() }
             }
         }
         .formStyle(.grouped)
@@ -143,6 +143,7 @@ struct FormInspector: View {
                     .buttonStyle(.borderless)
                     .disabled(field.options.count < 2)
                     .help("Remove this option")
+                    .accessibilityLabel("Remove Option \(index + 1)")
                 }
             }
             Button("Add Option") {

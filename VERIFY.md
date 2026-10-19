@@ -41,6 +41,8 @@ Open the app with `make run`.
 - [ ] Settings ▸ General ▸ Default PDF app lists every app that opens PDFs, Sheaf first, with the current one checked. Choosing another changes it; choosing Preview puts things back. The row follows a change made elsewhere, such as in the Finder, when you come back to Sheaf.
 - [ ] Settings now opens on the pane you last looked at.
 
+- [ ] **Default apps for pictures (added 2026-10-14).** Settings ▸ General ▸ Default Apps has PDF documents, Pictures (all kinds at once) and, under "Each kind of picture", JPEG, PNG, HEIF, TIFF, GIF, BMP, WebP and AVIF. I only looked: every row shows Preview, and nothing was changed. Choose Sheaf for Pictures: does macOS ask once or for each kind, and do they all end up as Sheaf? Set one kind back to Preview: the Pictures row then says "Different Apps". Double-click a JPEG in the Finder: it opens in Sheaf as a one-page document.
+
 ## Documents from Mail (added 2026-10-04)
 
 None of the steps that talk to Mail were run by me: they read your mailbox and write a draft in your account.
@@ -57,6 +59,42 @@ None of the steps that talk to Mail were run by me: they read your mailbox and w
 - [ ] A document that did not come from Mail saves and closes without any question, File ▸ Reply to Sender… is dimmed, and Sheaf never talks to Mail.
 - [ ] If something here does not work, run this right after and send me the output. It has no names or addresses:
       `/usr/bin/log show --last 5m --info --predicate 'subsystem == "com.valeryburtsev.Sheaf"'`
+
+## Apple Intelligence (Phase 9, added 2026-10-04)
+
+I ran these through the debug hook on this Mac (macOS 27, Apple Intelligence on): summaries, key points and answers on the macOS license in English and Portuguese and on the 158-page bash manual, picture descriptions, Auto Crop and Super Resolution on system pictures, and Writing Tools opening on selected text and on text being edited. What the system's own panels then do, and how good the results are on your documents, I cannot judge.
+
+- [ ] Toolbar ▸ Summary (or ⌃⌘U, or Tools ▸ Summarize) opens the Summary panel in place of the Format panel. Summarize a document you know. Is the summary right, and is it a sensible length? Try Key Points, This Page, and Selected Text with some text selected.
+- [ ] A long document (100 pages or more) shows "Reading part N of M…", can be stopped, and ends in a summary of the whole rather than of its first pages. It took several minutes for 158 pages here.
+- [ ] Copy and Add as Note under a summary: the note lands at the top left of the page being read and holds the text.
+- [ ] Ask: put a few questions whose answers you know, including one the document does not answer and one in another language than the document's. Do the page buttons under an answer go to where the answer is? The model here misread "shall not exceed $250" as "exceeds $250" once, and sometimes says the document does not say when it does. Tell me how often it is wrong on your documents; that decides whether Ask stays.
+- [ ] A document in Russian: the model does not list Russian among its languages, yet the first pages of the macOS license in Russian came out as a sensible summary in Russian, and Japanese gave sensible key points. Try your own Russian documents and questions: is it good enough to offer, or should Sheaf say the language is not supported?
+- [ ] A scanned document says there is no text to read; after Tools ▸ Recognize Text it can be summed up.
+- [ ] Writing Tools: double-click a paragraph in Edit mode, select some of it, and choose Edit ▸ Writing Tools ▸ Rewrite (or right-click). The text is rewritten in place and stays editable, and committing puts it on the page in the paragraph's font. The same in a text box and in a note's comment field.
+- [ ] Writing Tools on text selected on a page without editing: Summarize and Create Key Points show their result in the system's panel.
+- [ ] Edit ▸ Insert ▸ Image Playground…: make a picture and press Done. It appears on the page, selected. With text selected first, the text is offered as the idea; with a picture selected, the picture is offered as the source.
+- [ ] Format panel for a picture: Auto Crop masks to the subject (Edit Mask and Reset Mask still work, one Undo takes it back). Try a picture that is mirrored or turned.
+- [ ] Super Resolution on a small or blurry picture: sharper at the same size and place, Pixels in the panel go up four times, one Undo takes it back, and the saved file opens in Preview. Try a scan of text, where sharpening matters most. A picture over 1920 pixels, or one with see-through parts, gets an explanation instead.
+- [ ] On a Mac where the Super Resolution model is not there yet, the first use asks before downloading, shows progress, and then goes on. (It was already on this Mac.)
+- [ ] Describe, at the bottom of the Format panel for a picture: one or two sentences, with Copy and Add as Note.
+- [ ] File ▸ Document Info… ▸ Suggest fills the empty Title, Subject and Keywords, leaves filled ones alone, and nothing is saved until Save.
+- [ ] Shortcuts app: the "Summarize PDF" action gives text for a PDF passed to it.
+- [ ] **Private Cloud Compute (added 2026-10-04, needs your developer account).** The choice is built (an Intelligence pane in Settings and a menu at the bottom of the Summary panel) but hidden, at your request, until it can be used: Apple has to grant the app the entitlement `com.apple.developer.private-cloud-compute`. Request it at https://developer.apple.com/contact/request/private-cloud-compute/ and follow "Private Cloud Compute" in RELEASING.md, or tell me when it is granted and I will set up the rest. What I could check: the model reports as available on this Mac (32,768 tokens against 8,192 on the Mac, with reasoning), requests without the entitlement are refused, and Sheaf then makes the summary on this Mac and says why. No request has ever been answered by the service, so the quality, the speed, the limit and its messages are all untried.
+- [ ] With Apple Intelligence turned off in System Settings, or on a Mac without it: the Summary panel explains instead of offering, Suggest and Describe are not shown, and nothing else in the app changes.
+- [ ] Russian: the new strings read well, and the Summary panel's three tabs fit its width.
+- [ ] Dark and light appearance of the Summary panel next to the Format panel.
+
+## Privacy and legal fixes (added 2026-10-14)
+
+From the audit of the ten "legal traps". I checked these in the app through the debug hook, apart from what needs your Keychain or your eyes.
+
+- [ ] **Saved signatures are now encrypted.** The first time this build opens, your existing signatures (the plain `Signatures.json` in Sheaf's container) are sealed into `Signatures.sealed`, with a new key in your login Keychain called "Sheaf signatures", and the plain file is removed. Open the Sign menu: are your signatures all there? Make and remove one.
+- [ ] Debug builds are signed for this Mac only, and each build counts as a new app to the Keychain, so after rebuilding macOS may ask whether Sheaf may use "Sheaf signatures". Choose Always Allow. A release build signed with Developer ID asks once at most. If you choose Deny, the Sign menu says the signatures could not be read, and nothing is overwritten.
+- [ ] Settings ▸ General ▸ Name on notes and markup: change it, add a highlight and a note, and check the author in the Format panel (and in Preview's inspector after saving). Empty it: new markup has no author.
+- [ ] Summary panel ▸ Add as Note: the note starts with "Summary by Apple Intelligence" (or "Key points…", "Picture description…") and its author is "Apple Intelligence", not your name.
+- [ ] A picture from Image Playground carries IPTC metadata marking it as AI-made (`trainedAlgorithmicMedia`, creator tool "Image Playground"). Check with a tool that shows image metadata in PDFs (for example Acrobat's Content panel), if you have one.
+- [ ] Help ▸ Sheaf and Your Privacy opens the new help page. Read it: is everything it says true for the way you will ship Sheaf (especially once Sparkle, which needs network access, goes in)?
+- [ ] VoiceOver names the + and − buttons in Merge, Images to PDF and the file lists ("Add Files", "Remove Files"), and the remove button of each option of a list field.
 
 ## Markup (Phase 3)
 
@@ -185,6 +223,42 @@ None of the steps that talk to Mail were run by me: they read your mailbox and w
 - [ ] Resizing only shows where a line can break differently. A heading or an address made wider looks the same afterwards, because a PDF stores no box, only where the letters are. Say if that is confusing.
 - [ ] Open the document with your address block and double-click it: each line of the address is a line of its own in the editor, as on the page, not one run-on paragraph (changed 2026-10-04: blocks of short lines keep their line breaks). Check a few real documents for the opposite mistake too: a narrow column of running text, such as a caption or a sidebar, that now opens with a break at the end of every line.
 - [ ] Right-click a picture while editing: Bring to Front, Send to Back, Align on Page ▸, Cut, Copy, Paste, Duplicate, Add Link…, Edit Mask, Reset Mask, Replace…, Flip Horizontally, Flip Vertically, Remove Background, Delete. Right-click text: Edit Text, then the same arranging and pasteboard items. Compare with the menu in Pages.
+
+- [ ] **Typed text that did not show (fixed 2026-10-15).** In a PDF made with LaTeX (slides from a Beamer deck, say), add a line to a title with characters the title did not have before ("5555", "jjjj"), and click away. The new line now shows, in the nearest installed font, since the slide's font only carries the letters it used. Checked on copies of `14.1a PDF.pdf`. Text saved invisibly by the earlier build (your "5555" and "jjjj" on page 2) shows again once you change anything in that block. A title that grows by lines grows downwards and can run into what is below it, as in Pages: move the block up or the other one down.
+
+- [ ] **The editor shows the page's own font (added 2026-10-15).** Double-click text in a PDF that carries its fonts (your LaTeX slides, most PDFs from Word or Pages): the text keeps its look and line breaks while you edit, instead of turning into Helvetica. A word with a letter the document's copy of the font lacks shows whole in the closest installed font, while you type as on the page afterwards ("hello" stays in the slide's font, "world!" is in Helvetica). Where macOS cannot read the embedded font, or it would draw other letters than the page does, the editor uses the installed font as before. Try a few PDFs from different apps.
+
+- [ ] **Turning and adjusting pictures (added 2026-10-15).** Select a picture: the Format panel's Rotate row has a knob (drag it round; Shift for 15° steps), the angle, and Rotate Left and Rotate Right. The two buttons are also in the right-click menu and the Arrange menu. Check the knob turns the way you drag it. Under Adjustments, move Exposure and Saturation, try Enhance and the sliders under More Adjustments: the picture changes when you let go of a slider. Reset Adjustments brings back the picture as it was when selected. Select another picture and come back: the sliders start at zero again, and the changes made stay.
+
+## Tools at the side, as in Inkpage (added 2026-10-15)
+
+The rows of Markup, Edit and Form tools under the toolbar and the Format column are gone. All tools are in one floating strip at the side of the pages, with the options of the tool in hand, or of what is selected, in a panel beside it. Older items below that say "toolbar" or "Format panel" now mean the strip and that panel.
+
+- [ ] The strip: Select, Edit text and pictures, Highlight (or Underline, Strikethrough), Draw, Shapes, Text Box, Note, Sign and Stamp, Link, Redact, Form fields, Undo, Redo, Insert (+). The tool in hand is filled blue; clicking it again, or the arrow at the top, hides and shows its options. Hovering over a tool shows its name at once.
+- [ ] Each tool's panel: colours as round swatches (the rainbow at the end opens any colour), thickness and opacity as Inkpage's dotted sliders, the shapes and the kinds of text marking as a row of buttons, signatures and stamps as buttons, form fields as a grid. Check every tool once, and that what you set is what the next mark gets.
+- [ ] Select something (a note, a drawing, a picture, a paragraph in Edit, a form field): the panel shows its settings, as the Format panel did. Deselect: the tool's options come back.
+- [ ] Drag the dots at the top of the strip across the window: the strip moves to the left side, and stays there the next time.
+- [ ] The zoom at the foot: +, −, and the percentage as a menu with Fit Width and Fit Page.
+- [ ] Pages at Fit Width stop short of the strip; the panel covers the page while it is open, as in Inkpage.
+- [ ] Organize Pages hides the strip; Summary still opens its column at the right.
+- [ ] Dark appearance and Russian: the strip, the panels and the hover labels read well. (My captures of these fell back to plain drawing without the glass, so I could not judge them.)
+- [ ] The menus: Tools ▸ Select (⇧⌘A), Edit Text and Pictures (⇧⌘E), Form ▸ Edit Form Fields (⇧⌘M), View ▸ Show Options (⌃⌘I).
+
+## What Acrobat has, added 2026-10-15
+
+Use a copy of a document, not the original: these tools change pages.
+
+- [ ] **Paragraph formatting.** Edit tool, click a paragraph. The options panel has Style (bold, italic) and a Paragraph section (alignment, Line Spacing, Before Paragraph). Center a paragraph, then make it bold: it stays centered. Set it to the right, then back to the left: it returns to where it started. Undo takes back each step.
+- [ ] Center a heading on its own line: it moves to the middle of the page's text column, and the alignment buttons now show it as centered. Center it again: it does not move.
+- [ ] Line Spacing stops at about 1.7 times the font size. Wider spacing would make Sheaf read the lines as separate pieces of text; check that it never does within the range.
+- [ ] Bold and italic on a document set in an unusual font (a LaTeX paper, say): the words change to the closest installed bold or italic font. Look at how far that is from the original.
+- [ ] **Tools ▸ Bates Numbering…** opens Header and Footer with a Bates number in the bottom right. Set a prefix, a start and the digits; the preview shows the right number for the page shown when it is not page 1.
+- [ ] **Tools ▸ Background…** with a pale color: text and pictures stay on top. On a scanned document nothing shows, as the sheet says.
+- [ ] **Tools ▸ Crop Pages…**: the margins crop as the preview shows, on a page turned sideways too. Remove White Margins on a page with a small drawing in one corner. Show Whole Pages brings the edges back.
+- [ ] **Tools ▸ Remove Hidden Information…** on a document with comments, bookmarks and an attachment (the Organize sidebar shows bookmarks). Each kind found has a count; after Remove, File ▸ Document Info shows no author or title, the bookmarks and comments are gone, and links still work. Save, reopen in Preview: the same.
+- [ ] **View ▸ Read Out Loud** reads from the page being read and turns the pages as it goes. A Russian document is read in a Russian voice. Choose the item again to stop. Closing the window stops it.
+- [ ] **File ▸ Export To ▸ Rich Text…, Web Page…, Plain Text…**: open each result in TextEdit or Safari. Paragraphs and fonts as in the Word export, no pictures.
+- [ ] Document Tools menu in the toolbar has the new items, and they are dimmed for a document that cannot be changed.
 
 ## Arranging, as in Pages (added 2026-10-04)
 

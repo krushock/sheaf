@@ -85,7 +85,7 @@ extension ViewerModel {
     @discardableResult
     private func addMarks(_ areas: [Int: [PDFRectangle]], name: String) -> Int {
         guard let sheafDocument else { return 0 }
-        let author = NSFullUserName()
+        let author = Preferences.markupAuthorValue
         let date = Date(timeIntervalSince1970: Date().timeIntervalSince1970.rounded(.down))
         return sheafDocument.apply(name) { editor, effect in
             var count = 0
